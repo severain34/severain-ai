@@ -45,18 +45,16 @@ const Chat = () => {
   const fileRef = useRef<HTMLInputElement>(null);
   const recogRef = useRef<any>(null);
 
-  // Auth gate
+  // Optional auth — usable before login
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) navigate("/auth");
-      else setUser(data.session.user);
+      setUser(data.session?.user ?? null);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (!session) navigate("/auth");
-      else setUser(session.user);
+      setUser(session?.user ?? null);
     });
     return () => sub.subscription.unsubscribe();
-  }, [navigate]);
+  }, []);
 
   useEffect(() => {
     if (threads.length === 0) {
