@@ -249,10 +249,16 @@ const Chat = () => {
             <Crown className="w-4 h-4" /> {tr(lang, "upgrade")}
           </button>
           <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
-            <span className="truncate flex-1">{user?.email}</span>
-            <button onClick={logout} title={tr(lang, "logout")} className="hover:text-foreground">
-              <LogOut className="w-4 h-4" />
-            </button>
+            <span className="truncate flex-1">{user?.email || "Guest"}</span>
+            {user ? (
+              <button onClick={logout} title={tr(lang, "logout")} className="hover:text-foreground">
+                <LogOut className="w-4 h-4" />
+              </button>
+            ) : (
+              <button onClick={() => navigate("/auth")} className="hover:text-foreground font-medium">
+                {tr(lang, "signin")}
+              </button>
+            )}
           </div>
         </div>
       </aside>
