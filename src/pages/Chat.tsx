@@ -45,18 +45,16 @@ const Chat = () => {
   const fileRef = useRef<HTMLInputElement>(null);
   const recogRef = useRef<any>(null);
 
-  // Auth gate
+  // Optional auth — usable before login
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) navigate("/auth");
-      else setUser(data.session.user);
+      setUser(data.session?.user ?? null);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (!session) navigate("/auth");
-      else setUser(session.user);
+      setUser(session?.user ?? null);
     });
     return () => sub.subscription.unsubscribe();
-  }, [navigate]);
+  }, []);
 
   useEffect(() => {
     if (threads.length === 0) {
@@ -251,10 +249,16 @@ const Chat = () => {
             <Crown className="w-4 h-4" /> {tr(lang, "upgrade")}
           </button>
           <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
-            <span className="truncate flex-1">{user?.email}</span>
-            <button onClick={logout} title={tr(lang, "logout")} className="hover:text-foreground">
-              <LogOut className="w-4 h-4" />
-            </button>
+            <span className="truncate flex-1">{user?.email || "Guest"}</span>
+            {user ? (
+              <button onClick={logout} title={tr(lang, "logout")} className="hover:text-foreground">
+                <LogOut className="w-4 h-4" />
+              </button>
+            ) : (
+              <button onClick={() => navigate("/auth")} className="hover:text-foreground font-medium">
+                {tr(lang, "signin")}
+              </button>
+            )}
           </div>
         </div>
       </aside>
