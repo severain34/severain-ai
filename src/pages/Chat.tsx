@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import {
-  Send, Plus, Trash2, MessageSquare, Sparkles, Menu, X, Search, PanelLeftClose,
+  ArrowUp, Plus, Trash2, MessageSquare, Sparkles, Menu, X, Search, PanelLeftClose,
   PanelLeft, Paperclip, Mic, Globe, Crown, LogOut, GraduationCap, Code2, Brain,
+  Video, Image as ImageIcon, Gamepad2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -309,6 +310,27 @@ const Chat = () => {
                 <h1 className="text-3xl font-bold font-heading mb-2">{tr(lang, "welcome")}</h1>
                 <p className="text-muted-foreground">{tr(lang, "tagline")}</p>
                 <p className="text-xs text-muted-foreground mt-4 italic">{tr(lang, "quote")}</p>
+
+                <div className="grid sm:grid-cols-3 gap-3 mt-8 max-w-2xl mx-auto">
+                  {[
+                    { icon: Video, label: "Make a Video", color: "text-pink-400",
+                      prompt: "Create a detailed video concept with scene-by-scene script, shot list, camera angles, transitions, music suggestions and a ready-to-use prompt for video generators like Sora / Runway / Veo about: " },
+                    { icon: ImageIcon, label: "Make a Picture", color: "text-amber-400",
+                      prompt: "Generate a highly detailed image-generation prompt (subject, style, lighting, composition, camera, mood, color palette, aspect ratio) ready for Midjourney / DALL·E / Nano Banana about: " },
+                    { icon: Gamepad2, label: "Make a Game", color: "text-emerald-400",
+                      prompt: "Build a complete playable HTML5 + JavaScript + Canvas game in a single index.html file (with game loop, controls, scoring, sounds and polish). Game idea: " },
+                  ].map((q) => {
+                    const Icon = q.icon;
+                    return (
+                      <button key={q.label}
+                        onClick={() => { setInput(q.prompt); setTimeout(() => inputRef.current?.focus(), 30); }}
+                        className="group p-4 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-secondary/50 transition text-left">
+                        <Icon className={`w-5 h-5 mb-2 ${q.color}`} />
+                        <p className="text-sm font-medium">{q.label}</p>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
             {messages.map((m, i) => <Bubble key={i} role={m.role} content={m.content} />)}
@@ -343,7 +365,7 @@ const Chat = () => {
                 className="flex-1 bg-transparent outline-none resize-none px-2 py-2 max-h-40" />
               <button onClick={sendMessage} disabled={streaming || !input.trim()}
                 className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center disabled:opacity-40 hover:opacity-90">
-                <Send className="w-4 h-4 text-primary-foreground" />
+                <ArrowUp className="w-4 h-4 text-primary-foreground" />
               </button>
             </div>
             <p className="text-xs text-muted-foreground text-center mt-2">
