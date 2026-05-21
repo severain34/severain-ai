@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import {
   ArrowUp, Plus, Trash2, MessageSquare, Sparkles, Menu, X, Search, PanelLeftClose,
   PanelLeft, Paperclip, Mic, Globe, Crown, LogOut, GraduationCap, Code2, Brain,
-  Video, Image as ImageIcon, Gamepad2,
+  Video, Image as ImageIcon, Gamepad2, LogIn, Code,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -291,13 +291,37 @@ const Chat = () => {
             })}
           </div>
 
-          <div className="ml-auto relative">
-            <Globe className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <select value={lang} onChange={(e) => setLang(e.target.value)}
-              className="pl-8 pr-3 py-1.5 rounded-lg bg-secondary border border-border text-sm outline-none">
-              {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
-            </select>
+          <div className="ml-auto flex items-center gap-2">
+            <a
+              href="https://code.visualstudio.com/download"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Connect with your text editor (VS Code, Cursor, etc.)"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm hover:bg-secondary/70"
+            >
+              <Code className="w-4 h-4 text-primary" />
+              <span>Connect editor</span>
+            </a>
+
+            <div className="relative">
+              <Globe className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <select value={lang} onChange={(e) => setLang(e.target.value)}
+                className="pl-8 pr-3 py-1.5 rounded-lg bg-secondary border border-border text-sm outline-none">
+                {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+              </select>
+            </div>
+
+            {!user && (
+              <button
+                onClick={() => navigate("/auth")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg gradient-primary text-primary-foreground text-sm font-medium hover:opacity-90"
+              >
+                <LogIn className="w-4 h-4" />
+                <span className="hidden sm:inline">{tr(lang, "signin")}</span>
+              </button>
+            )}
           </div>
+
         </header>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto">
