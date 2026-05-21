@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import {
   ArrowUp, Plus, Trash2, MessageSquare, Sparkles, Menu, X, Search, PanelLeftClose,
   PanelLeft, Paperclip, Mic, Globe, Crown, LogOut, GraduationCap, Code2, Brain,
-  Video, Image as ImageIcon, Gamepad2, LogIn, Code,
+  Video, Image as ImageIcon, Gamepad2, LogIn, Code, Sun, Moon, Play,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,11 +16,20 @@ type Thread = { id: string; title: string; messages: Message[]; updatedAt: numbe
 const STORAGE_KEY = "severain_threads_v2";
 const ACTIVE_KEY = "severain_active_v2";
 const LANG_KEY = "severain_lang";
+const THEME_KEY = "severain_theme";
 
 const MODES = [
   { id: "expert", icon: Brain, color: "text-purple-400" },
   { id: "learner", icon: GraduationCap, color: "text-green-400" },
   { id: "fullstack", icon: Code2, color: "text-blue-400" },
+];
+
+// Sample free playable videos for the "Make a Video" quick action
+const SAMPLE_VIDEOS = [
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
 ];
 
 const Chat = () => {
@@ -41,19 +50,28 @@ const Chat = () => {
   const [attachment, setAttachment] = useState<{ name: string; content: string } | null>(null);
   const [listening, setListening] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [theme, setTheme] = useState<"dark" | "light">(
+    () => (localStorage.getItem(THEME_KEY) as "dark" | "light") || "dark"
+  );
+  const [preview, setPreview] = useState<{ type: "game" | "video"; src: string } | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const recogRef = useRef<any>(null);
+  const pendingPreview = useRef<"game" | "video" | null>(null);
 
-  // Optional auth — usable before login
+  // Theme
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setUser(session?.user ?? null);
-    });
+    const root = document.documentElement;
+    if (theme === "light") root.classList.add("light");
+    else root.classList.remove("light");
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null));
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -110,17 +128,41 @@ const Chat = () => {
     if (listening) { recogRef.current?.stop(); setListening(false); return; }
     const r = new SR();
     r.lang = lang === "en" ? "en-US" : lang;
-    r.continuous = false;
-    r.interimResults = true;
+    r.continuous = false; r.interimResults = true;
     r.onresult = (ev: any) => {
       const text = Array.from(ev.results).map((x: any) => x[0].transcript).join("");
       setInput((prev) => prev + (prev ? " " : "") + text);
     };
     r.onend = () => setListening(false);
     r.onerror = () => setListening(false);
-    recogRef.current = r;
-    r.start();
-    setListening(true);
+    recogRef.current = r; r.start(); setListening(true);
+  };
+
+  // Extract a runnable HTML game from assistant text
+  const extractGameHtml = (text: string): string | null => {
+    const fence = text.match(/```(?:html|HTML)\n([\s\S]*?)```/);
+    if (fence && /<\s*(html|canvas|script|body)/i.test(fence[1])) return fence[1];
+    const doc = text.match(/<!doctype[\s\S]*?<\/html>/i);
+    if (doc) return doc[0];
+    return null;
+  };
+
+  // Extract a video URL from assistant text
+  const extractVideoUrl = (text: string): string | null => {
+    const m = text.match(/https?:\/\/\S+\.(?:mp4|webm|mov)(?:\?\S+)?/i);
+    return m ? m[0] : null;
+  };
+
+  const quickAction = (kind: "video" | "picture" | "game") => {
+    const prompts = {
+      video: "Describe a beautiful short video scene (just one paragraph, no code).",
+      picture: "Describe a stunning image, ready for Midjourney/DALL·E (one prompt only).",
+      game: "Build a COMPLETE playable HTML5 + JavaScript + Canvas game in a SINGLE ```html``` code block (full <!doctype html> document with <canvas>, game loop, keyboard controls, scoring). Make it fun and polished. Game: a small arcade game of your choice.",
+    } as const;
+    setInput(prompts[kind]);
+    if (kind === "game") pendingPreview.current = "game";
+    if (kind === "video") pendingPreview.current = "video";
+    setTimeout(() => inputRef.current?.focus(), 30);
   };
 
   const sendMessage = async () => {
@@ -129,6 +171,8 @@ const Chat = () => {
     setInput("");
     const sentAttachment = attachment;
     setAttachment(null);
+    const wantPreview = pendingPreview.current;
+    pendingPreview.current = null;
 
     const userMsg: Message = { role: "user", content: text };
     const updated = [...active.messages, userMsg];
@@ -180,6 +224,16 @@ const Chat = () => {
           : t,
       ));
       setStreamingText("");
+
+      // Auto-open playable preview
+      if (wantPreview === "game") {
+        const html = extractGameHtml(assistantText);
+        if (html) setPreview({ type: "game", src: html });
+      } else if (wantPreview === "video") {
+        const vid = extractVideoUrl(assistantText)
+          || SAMPLE_VIDEOS[Math.floor(Math.random() * SAMPLE_VIDEOS.length)];
+        setPreview({ type: "video", src: vid });
+      }
     } catch (e) {
       toast.error((e as Error).message);
       setStreamingText("");
@@ -192,16 +246,34 @@ const Chat = () => {
   const logout = async () => { await supabase.auth.signOut(); navigate("/auth"); };
 
   const messages = active?.messages || [];
-  const filteredThreads = threads
-    .slice()
-    .filter((t) => !search || t.title.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => b.updatedAt - a.updatedAt);
+  const filteredThreads = useMemo(() =>
+    threads.slice()
+      .filter((t) => !search || t.title.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => b.updatedAt - a.updatedAt),
+    [threads, search]);
+
+  // VS Code deep link — opens local installed VS Code via vscode:// protocol
+  const openLocalEditor = () => {
+    const win = window.open("vscode://", "_self");
+    setTimeout(() => {
+      toast.message("If VS Code didn't open, install it first", {
+        action: { label: "Download", onClick: () => window.open("https://code.visualstudio.com/download", "_blank") },
+      });
+    }, 1200);
+    return win;
+  };
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
+    <div className="flex h-screen w-screen max-w-full bg-background text-foreground overflow-hidden relative">
+      {/* Ambient blobs for glassmorphism */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="blob bg-primary/20 w-[40rem] h-[40rem] -top-40 -left-40" />
+        <div className="blob bg-accent/15 w-[35rem] h-[35rem] -bottom-40 -right-40" />
+      </div>
+
       {/* Sidebar */}
       <aside
-        className={`${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 ${sidebarOpen ? "md:w-72" : "md:w-0 md:overflow-hidden"} fixed md:relative z-40 w-72 h-full bg-card border-r border-border flex flex-col transition-all`}
+        className={`${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 ${sidebarOpen ? "md:w-72" : "md:w-0 md:overflow-hidden"} fixed md:relative z-40 w-72 h-full glass flex flex-col transition-all`}
       >
         <div className="p-4 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -216,7 +288,7 @@ const Chat = () => {
         </div>
 
         <button onClick={newThread}
-          className="m-3 flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-secondary text-sm">
+          className="m-3 flex items-center gap-2 px-3 py-2 rounded-lg glass-input hover:bg-secondary text-sm">
           <Plus className="w-4 h-4" /> {tr(lang, "new_chat")}
         </button>
 
@@ -224,7 +296,7 @@ const Chat = () => {
           <Search className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder={tr(lang, "search")}
-            className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-secondary border border-border text-sm outline-none" />
+            className="w-full pl-8 pr-3 py-1.5 rounded-lg glass-input text-sm outline-none" />
         </div>
 
         <div className="flex-1 overflow-y-auto px-2 pb-3 space-y-1">
@@ -265,8 +337,8 @@ const Chat = () => {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="flex items-center gap-3 p-3 border-b border-border">
+      <main className="flex-1 flex flex-col min-w-0 relative z-10">
+        <header className="flex items-center gap-2 p-3 glass border-b border-border flex-wrap">
           <button onClick={() => setMobileOpen(true)} className="md:hidden text-muted-foreground">
             <Menu className="w-5 h-5" />
           </button>
@@ -275,7 +347,6 @@ const Chat = () => {
             {sidebarOpen ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeft className="w-5 h-5" />}
           </button>
 
-          {/* Mode tabs */}
           <div className="flex gap-1 p-1 bg-secondary rounded-lg">
             {MODES.map((m) => {
               const Icon = m.icon;
@@ -291,22 +362,29 @@ const Chat = () => {
             })}
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
-            <a
-              href="https://code.visualstudio.com/download"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Connect with your text editor (VS Code, Cursor, etc.)"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm hover:bg-secondary/70"
+          <div className="ml-auto flex items-center gap-2 flex-wrap">
+            {/* Theme toggle */}
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              title={theme === "dark" ? "Light mode" : "Dark mode"}
+              className="w-9 h-9 rounded-lg glass-input flex items-center justify-center hover:bg-secondary"
+            >
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
+            <button
+              onClick={openLocalEditor}
+              title="Open your installed VS Code / editor"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass-input text-sm hover:bg-secondary"
             >
               <Code className="w-4 h-4 text-primary" />
-              <span>Connect editor</span>
-            </a>
+              <span>Open editor</span>
+            </button>
 
             <div className="relative">
               <Globe className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               <select value={lang} onChange={(e) => setLang(e.target.value)}
-                className="pl-8 pr-3 py-1.5 rounded-lg bg-secondary border border-border text-sm outline-none">
+                className="pl-8 pr-3 py-1.5 rounded-lg glass-input text-sm outline-none">
                 {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
               </select>
             </div>
@@ -321,10 +399,9 @@ const Chat = () => {
               </button>
             )}
           </div>
-
         </header>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
             {messages.length === 0 && !streaming && (
               <div className="text-center py-20">
@@ -337,18 +414,15 @@ const Chat = () => {
 
                 <div className="grid sm:grid-cols-3 gap-3 mt-8 max-w-2xl mx-auto">
                   {[
-                    { icon: Video, label: "Make a Video", color: "text-pink-400",
-                      prompt: "Create a detailed video concept with scene-by-scene script, shot list, camera angles, transitions, music suggestions and a ready-to-use prompt for video generators like Sora / Runway / Veo about: " },
-                    { icon: ImageIcon, label: "Make a Picture", color: "text-amber-400",
-                      prompt: "Generate a highly detailed image-generation prompt (subject, style, lighting, composition, camera, mood, color palette, aspect ratio) ready for Midjourney / DALL·E / Nano Banana about: " },
-                    { icon: Gamepad2, label: "Make a Game", color: "text-emerald-400",
-                      prompt: "Build a complete playable HTML5 + JavaScript + Canvas game in a single index.html file (with game loop, controls, scoring, sounds and polish). Game idea: " },
+                    { icon: Video, label: "Play a Video", color: "text-pink-400", kind: "video" as const },
+                    { icon: ImageIcon, label: "Make a Picture", color: "text-amber-400", kind: "picture" as const },
+                    { icon: Gamepad2, label: "Play a Game", color: "text-emerald-400", kind: "game" as const },
                   ].map((q) => {
                     const Icon = q.icon;
                     return (
                       <button key={q.label}
-                        onClick={() => { setInput(q.prompt); setTimeout(() => inputRef.current?.focus(), 30); }}
-                        className="group p-4 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-secondary/50 transition text-left">
+                        onClick={() => quickAction(q.kind)}
+                        className="group p-4 rounded-xl glass hover:bg-secondary/50 transition text-left">
                         <Icon className={`w-5 h-5 mb-2 ${q.color}`} />
                         <p className="text-sm font-medium">{q.label}</p>
                       </button>
@@ -357,13 +431,19 @@ const Chat = () => {
                 </div>
               </div>
             )}
-            {messages.map((m, i) => <Bubble key={i} role={m.role} content={m.content} />)}
-            {streaming && <Bubble role="assistant" content={streamingText || "Thinking..."} />}
+            {messages.map((m, i) => (
+              <Bubble key={i} role={m.role} content={m.content}
+                onPlayGame={(html) => setPreview({ type: "game", src: html })}
+                onPlayVideo={(src) => setPreview({ type: "video", src })}
+                extractGame={extractGameHtml} extractVideo={extractVideoUrl} />
+            ))}
+            {streaming && <Bubble role="assistant" content={streamingText || "Thinking..."}
+              extractGame={extractGameHtml} extractVideo={extractVideoUrl} />}
           </div>
         </div>
 
         {/* Composer */}
-        <div className="border-t border-border p-4">
+        <div className="glass border-t border-border p-4">
           <div className="max-w-3xl mx-auto">
             {attachment && (
               <div className="flex items-center gap-2 mb-2 px-3 py-1.5 bg-secondary rounded-lg text-xs">
@@ -372,7 +452,7 @@ const Chat = () => {
                 <button onClick={() => setAttachment(null)}><X className="w-3 h-3" /></button>
               </div>
             )}
-            <div className="relative flex items-end gap-2 bg-card border border-border rounded-2xl p-2 focus-within:ring-2 focus-within:ring-primary/40">
+            <div className="relative flex items-end gap-2 glass rounded-2xl p-2 focus-within:ring-2 focus-within:ring-primary/40">
               <input ref={fileRef} type="file" hidden onChange={onFile}
                 accept=".txt,.md,.json,.csv,.js,.ts,.tsx,.jsx,.py,.html,.css,.xml,.yaml,.yml" />
               <button onClick={() => fileRef.current?.click()} title="Attach file"
@@ -405,7 +485,7 @@ const Chat = () => {
       {showUpgrade && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setShowUpgrade(false)}>
           <div onClick={(e) => e.stopPropagation()}
-            className="bg-card border border-border rounded-2xl p-6 max-w-md w-full">
+            className="glass rounded-2xl p-6 max-w-md w-full">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <Crown className="w-5 h-5 text-yellow-500" /> {tr(lang, "upgrade")} Severain AI Pro
@@ -423,7 +503,7 @@ const Chat = () => {
               <p className="text-xs text-muted-foreground mb-1">Pay via MTN Mobile Money / Airtel</p>
               <p className="text-lg font-bold">📱 0792 315 839</p>
               <p className="text-xs text-muted-foreground mt-2">
-                Send payment to the number above and message the same number with your account email. Pro is activated within 24h.
+                Send payment, then message the same number with your account email. Pro activates within 24h.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 text-center">
@@ -439,27 +519,78 @@ const Chat = () => {
           </div>
         </div>
       )}
+
+      {/* Playable preview modal */}
+      {preview && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setPreview(null)}>
+          <div onClick={(e) => e.stopPropagation()}
+            className="glass rounded-2xl p-3 w-full max-w-4xl">
+            <div className="flex items-center justify-between mb-2 px-1">
+              <span className="text-sm font-medium">{preview.type === "game" ? "🎮 Playable Game" : "🎬 Video"}</span>
+              <button onClick={() => setPreview(null)} className="hover:bg-secondary p-1 rounded">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {preview.type === "game" ? (
+              <iframe
+                title="game"
+                sandbox="allow-scripts allow-pointer-lock"
+                srcDoc={preview.src}
+                className="w-full h-[70vh] rounded-xl bg-white"
+              />
+            ) : (
+              <video src={preview.src} controls autoPlay className="w-full max-h-[70vh] rounded-xl bg-black" />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-const Bubble = ({ role, content }: { role: "user" | "assistant"; content: string }) => {
+const Bubble = ({
+  role, content, onPlayGame, onPlayVideo, extractGame, extractVideo,
+}: {
+  role: "user" | "assistant"; content: string;
+  onPlayGame?: (html: string) => void;
+  onPlayVideo?: (src: string) => void;
+  extractGame?: (t: string) => string | null;
+  extractVideo?: (t: string) => string | null;
+}) => {
   if (role === "user") {
     return (
       <div className="flex justify-end">
         <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-primary text-primary-foreground">
-          <p className="whitespace-pre-wrap">{content}</p>
+          <p className="whitespace-pre-wrap break-words">{content}</p>
         </div>
       </div>
     );
   }
+  const game = extractGame?.(content) || null;
+  const video = extractVideo?.(content) || null;
   return (
     <div className="flex gap-3">
       <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shrink-0">
         <Sparkles className="w-4 h-4 text-primary-foreground" />
       </div>
-      <div className="flex-1 prose prose-invert prose-sm max-w-none prose-pre:bg-secondary prose-pre:border prose-pre:border-border prose-code:text-accent">
+      <div className="flex-1 min-w-0 prose prose-invert prose-sm max-w-none prose-pre:bg-secondary prose-pre:border prose-pre:border-border prose-code:text-foreground">
         <ReactMarkdown>{content}</ReactMarkdown>
+        {(game || video) && (
+          <div className="not-prose flex gap-2 mt-2">
+            {game && onPlayGame && (
+              <button onClick={() => onPlayGame(game)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg gradient-primary text-primary-foreground text-xs font-medium">
+                <Play className="w-3.5 h-3.5" /> Play Game
+              </button>
+            )}
+            {video && onPlayVideo && (
+              <button onClick={() => onPlayVideo(video)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg gradient-primary text-primary-foreground text-xs font-medium">
+                <Play className="w-3.5 h-3.5" /> Play Video
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
