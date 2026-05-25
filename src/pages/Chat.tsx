@@ -402,7 +402,7 @@ const Chat = () => {
         </header>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+          <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
             {messages.length === 0 && !streaming && (
               <div className="text-center py-20">
                 <div className="inline-flex w-16 h-16 rounded-2xl gradient-primary glow-primary items-center justify-center mb-4">
@@ -522,12 +522,19 @@ const Chat = () => {
 
       {/* Playable preview modal */}
       {preview && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setPreview(null)}>
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 animate-in fade-in duration-300" onClick={() => setPreview(null)}>
           <div onClick={(e) => e.stopPropagation()}
-            className="glass rounded-2xl p-3 w-full max-w-4xl">
-            <div className="flex items-center justify-between mb-2 px-1">
-              <span className="text-sm font-medium">{preview.type === "game" ? "🎮 Playable Game" : "🎬 Video"}</span>
-              <button onClick={() => setPreview(null)} className="hover:bg-secondary p-1 rounded">
+            className="w-full max-w-4xl animate-in zoom-in-95 duration-300">
+            <div className="flex items-center justify-between mb-3 px-1">
+              <span className="text-sm font-medium flex items-center gap-2 text-white">
+                {preview.type === "game" ? "🎮 Playable Game" : (
+                  <>
+                    <span className="inline-block w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+                    CapCut Studio · Preview
+                  </>
+                )}
+              </span>
+              <button onClick={() => setPreview(null)} className="hover:bg-white/10 p-1.5 rounded text-white">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -539,7 +546,50 @@ const Chat = () => {
                 className="w-full h-[70vh] rounded-xl bg-white"
               />
             ) : (
-              <video src={preview.src} controls autoPlay className="w-full max-h-[70vh] rounded-xl bg-black" />
+              <div className="capcut-frame">
+                <div className="relative rounded-[0.9rem] overflow-hidden bg-black">
+                  <video
+                    src={preview.src}
+                    controls
+                    autoPlay
+                    loop
+                    className="capcut-video w-full max-h-[68vh] bg-black"
+                  />
+                  {/* Floating sparkles overlay */}
+                  <div className="pointer-events-none absolute inset-0">
+                    {[10, 28, 46, 64, 82].map((left, i) => (
+                      <span
+                        key={i}
+                        className="capcut-spark"
+                        style={{ left: `${left}%`, bottom: "10%", animationDelay: `${i * 0.45}s` }}
+                      />
+                    ))}
+                  </div>
+                  {/* Top-left badge */}
+                  <div className="pointer-events-none absolute top-3 left-3 px-2 py-1 rounded-md text-[10px] font-semibold tracking-wider bg-black/50 backdrop-blur text-white border border-white/10">
+                    ● REC · 4K
+                  </div>
+                </div>
+                {/* CapCut-style timeline */}
+                <div className="px-3 pt-3 pb-2">
+                  <div className="flex items-center gap-2 text-[10px] text-white/70 mb-1.5">
+                    <span>00:00</span>
+                    <div className="flex-1 h-1 rounded-full bg-white/10 overflow-hidden">
+                      <div className="capcut-timeline" />
+                    </div>
+                    <span>00:08</span>
+                  </div>
+                  <div className="flex gap-1">
+                    {Array.from({ length: 24 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-6 flex-1 rounded-sm bg-gradient-to-b from-white/15 to-white/5"
+                        style={{ opacity: 0.4 + (i % 5) * 0.12 }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -559,9 +609,9 @@ const Bubble = ({
 }) => {
   if (role === "user") {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-primary text-primary-foreground">
-          <p className="whitespace-pre-wrap break-words">{content}</p>
+      <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="max-w-[80%] rounded-3xl px-5 py-3 bg-secondary text-foreground">
+          <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>
         </div>
       </div>
     );
@@ -569,23 +619,20 @@ const Bubble = ({
   const game = extractGame?.(content) || null;
   const video = extractVideo?.(content) || null;
   return (
-    <div className="flex gap-3">
-      <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shrink-0">
-        <Sparkles className="w-4 h-4 text-primary-foreground" />
-      </div>
-      <div className="flex-1 min-w-0 prose prose-invert prose-sm max-w-none prose-pre:bg-secondary prose-pre:border prose-pre:border-border prose-code:text-foreground">
+    <div className="group animate-in fade-in duration-300">
+      <div className="chat-prose prose prose-invert max-w-none prose-pre:bg-secondary prose-pre:border prose-pre:border-border prose-code:text-foreground prose-headings:text-foreground prose-p:text-foreground/90">
         <ReactMarkdown>{content}</ReactMarkdown>
         {(game || video) && (
-          <div className="not-prose flex gap-2 mt-2">
+          <div className="not-prose flex gap-2 mt-3">
             {game && onPlayGame && (
               <button onClick={() => onPlayGame(game)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg gradient-primary text-primary-foreground text-xs font-medium">
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg gradient-primary text-primary-foreground text-xs font-medium hover:opacity-90">
                 <Play className="w-3.5 h-3.5" /> Play Game
               </button>
             )}
             {video && onPlayVideo && (
               <button onClick={() => onPlayVideo(video)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg gradient-primary text-primary-foreground text-xs font-medium">
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg gradient-primary text-primary-foreground text-xs font-medium hover:opacity-90">
                 <Play className="w-3.5 h-3.5" /> Play Video
               </button>
             )}

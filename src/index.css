@@ -132,3 +132,51 @@
   background: hsl(var(--secondary)) !important;
 }
 
+/* ChatGPT-style chat surface */
+.chat-prose { font-size: 1rem; line-height: 1.75; }
+.chat-prose p { margin: 0.6rem 0; }
+.chat-prose h1, .chat-prose h2, .chat-prose h3 { margin-top: 1.2rem; margin-bottom: 0.6rem; }
+
+/* CapCut-style video preview animations */
+@keyframes ken-burns {
+  0%   { transform: scale(1) translate(0, 0); }
+  50%  { transform: scale(1.08) translate(-1%, 1%); }
+  100% { transform: scale(1) translate(0, 0); }
+}
+@keyframes gradient-sweep {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+@keyframes float-spark {
+  0%   { transform: translateY(0) scale(1); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translateY(-80px) scale(0.4); opacity: 0; }
+}
+@keyframes timeline-progress {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+.capcut-frame {
+  position: relative;
+  padding: 2px;
+  border-radius: 1rem;
+  background: linear-gradient(110deg, #ff2e9a, #7b5cff, #00e0ff, #ff2e9a);
+  background-size: 200% 200%;
+  animation: gradient-sweep 6s linear infinite;
+}
+.capcut-video { animation: ken-burns 14s ease-in-out infinite; }
+.capcut-spark {
+  position: absolute;
+  width: 6px; height: 6px;
+  border-radius: 9999px;
+  background: white;
+  box-shadow: 0 0 12px 2px rgba(255,255,255,0.9);
+  animation: float-spark 2.4s ease-out infinite;
+}
+.capcut-timeline {
+  height: 4px;
+  background: linear-gradient(90deg, #ff2e9a, #7b5cff, #00e0ff);
+  border-radius: 9999px;
+  animation: timeline-progress 8s linear infinite;
+}
+
