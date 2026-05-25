@@ -598,6 +598,44 @@ const Chat = () => {
   );
 };
 
+const CopyBtn = ({ text, className = "" }: { text: string; className?: string }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button onClick={handleCopy} className={`items-center gap-1 text-xs transition-opacity ${className}`}>
+      {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+      {copied ? "Copied" : "Copy"}
+    </button>
+  );
+};
+
+const PreWithCopy = ({ children }: { children: React.ReactNode }) => {
+  const [copied, setCopied] = useState(false);
+  const preRef = useRef<HTMLPreElement>(null);
+  const handleCopy = () => {
+    const text = preRef.current?.innerText || "";
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="relative group">
+      <button
+        onClick={handleCopy}
+        className="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-black/40 hover:bg-black/60 backdrop-blur text-white/80 opacity-0 group-hover:opacity-100 transition-opacity text-xs flex items-center gap-1"
+      >
+        {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+        {copied ? "Copied" : "Copy"}
+      </button>
+      <pre ref={preRef} className="!mt-0">{children}</pre>
+    </div>
+  );
+};
+
 const Bubble = ({
   role, content, onPlayGame, onPlayVideo, extractGame, extractVideo,
 }: {
@@ -610,8 +648,13 @@ const Bubble = ({
   if (role === "user") {
     return (
       <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
-        <div className="max-w-[80%] rounded-3xl px-5 py-3 bg-secondary text-foreground">
-          <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>
+        <div className="relative group max-w-[80%]">
+          <div className="rounded-3xl px-5 py-3 bg-secondary text-foreground">
+            <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>
+          </div>
+          <div className="absolute -top-3 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <CopyBtn text={content} className="p-1.5 rounded-md bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground flex" />
+          </div>
         </div>
       </div>
     );
@@ -619,9 +662,9 @@ const Bubble = ({
   const game = extractGame?.(content) || null;
   const video = extractVideo?.(content) || null;
   return (
-    <div className="group animate-in fade-in duration-300">
+    <div className="group animate-in fade-in duration-300 relative">
       <div className="chat-prose prose prose-invert max-w-none prose-pre:bg-secondary prose-pre:border prose-pre:border-border prose-code:text-foreground prose-headings:text-foreground prose-p:text-foreground/90">
-        <ReactMarkdown>{content}</ReactMarkdown>
+        <ReactMarkdown components={{ pre: PreWithCopy }}>{content}</ReactMarkdown>
         {(game || video) && (
           <div className="not-prose flex gap-2 mt-3">
             {game && onPlayGame && (
@@ -638,6 +681,9 @@ const Bubble = ({
             )}
           </div>
         )}
+      </div>
+      <div className="absolute -top-3 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <CopyBtn text={content} className="p-1.5 rounded-md bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground flex" />
       </div>
     </div>
   );
