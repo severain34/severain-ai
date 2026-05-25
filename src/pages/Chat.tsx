@@ -402,7 +402,7 @@ const Chat = () => {
         </header>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+          <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
             {messages.length === 0 && !streaming && (
               <div className="text-center py-20">
                 <div className="inline-flex w-16 h-16 rounded-2xl gradient-primary glow-primary items-center justify-center mb-4">
