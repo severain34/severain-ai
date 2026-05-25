@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import {
-  ArrowUp, Plus, Trash2, MessageSquare, Sparkles, Menu, X, Search, PanelLeftClose,
+  Send, Plus, Trash2, MessageSquare, Sparkles, Menu, X, Search, PanelLeftClose,
   PanelLeft, Paperclip, Mic, Globe, Crown, LogOut, GraduationCap, Code2, Brain,
-  Video, Image as ImageIcon, Gamepad2, LogIn, Code, Sun, Moon, Play,
+  Video, Image as ImageIcon, Gamepad2, LogIn, Code, Sun, Moon, Play, Copy, Check,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
