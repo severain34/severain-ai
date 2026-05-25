@@ -469,7 +469,7 @@ const Chat = () => {
                 className="flex-1 bg-transparent outline-none resize-none px-2 py-2 max-h-40" />
               <button onClick={sendMessage} disabled={streaming || !input.trim()}
                 className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center disabled:opacity-40 hover:opacity-90">
-                <ArrowUp className="w-4 h-4 text-primary-foreground" />
+                <Send className="w-4 h-4 text-primary-foreground" />
               </button>
             </div>
             <p className="text-xs text-muted-foreground text-center mt-2">
