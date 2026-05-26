@@ -473,11 +473,13 @@ const Chat = () => {
             )}
             {messages.map((m, i) => (
               <Bubble key={i} role={m.role} content={m.content}
+                voiceKind={voiceKind}
                 onPlayGame={(html) => setPreview({ type: "game", src: html })}
                 onPlayVideo={(src) => setPreview({ type: "video", src })}
                 extractGame={extractGameHtml} extractVideo={extractVideoUrl} />
             ))}
             {streaming && <Bubble role="assistant" content={streamingText || "Thinking..."}
+              voiceKind={voiceKind}
               extractGame={extractGameHtml} extractVideo={extractVideoUrl} />}
           </div>
         </div>
