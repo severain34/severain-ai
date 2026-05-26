@@ -4,7 +4,8 @@ import ReactMarkdown from "react-markdown";
 import {
   Send, Plus, Trash2, MessageSquare, Sparkles, Menu, X, Search, PanelLeftClose,
   PanelLeft, Paperclip, Mic, Globe, Crown, LogOut, GraduationCap, Code2, Brain,
-  Video, Image as ImageIcon, Gamepad2, LogIn, Code, Sun, Moon, Play, Copy, Check,
+  LogIn, Code, Sun, Moon, Play, Copy, Check, Maximize2, Minimize2, Volume2,
+  ClipboardList, Hammer, Wand2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
