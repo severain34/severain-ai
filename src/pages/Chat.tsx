@@ -405,6 +405,21 @@ const Chat = () => {
               <span>Open editor</span>
             </button>
 
+            {/* Voice persona picker */}
+            <div className="relative">
+              <Volume2 className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <select
+                value={voiceKind}
+                onChange={(e) => setVoiceKind(e.target.value as any)}
+                title="Voice for read-aloud"
+                className="pl-8 pr-3 py-1.5 rounded-lg glass-input text-sm outline-none"
+              >
+                <option value="kid">Kid voice</option>
+                <option value="woman">Woman voice</option>
+                <option value="man">Man voice</option>
+              </select>
+            </div>
+
             <div className="relative">
               <Globe className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               <select value={lang} onChange={(e) => setLang(e.target.value)}
