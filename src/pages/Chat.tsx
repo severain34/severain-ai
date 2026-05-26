@@ -154,15 +154,13 @@ const Chat = () => {
     return m ? m[0] : null;
   };
 
-  const quickAction = (kind: "video" | "picture" | "game") => {
+  const quickAction = (kind: "plan" | "build" | "prompt") => {
     const prompts = {
-      video: "Describe a beautiful short video scene (just one paragraph, no code).",
-      picture: "Describe a stunning image, ready for Midjourney/DALL·E (one prompt only).",
-      game: "Build a COMPLETE playable HTML5 + JavaScript + Canvas game in a SINGLE ```html``` code block (full <!doctype html> document with <canvas>, game loop, keyboard controls, scoring). Make it fun and polished. Game: a small arcade game of your choice.",
+      plan: "Act as a senior product architect. Create a detailed, step-by-step PLAN for: [describe your project here]. Include goals, milestones, tech stack, file structure, data model, risks, and a timeline.",
+      build: "Act as a senior full-stack engineer. BUILD a complete, production-ready implementation for: [describe what to build]. Provide full file structure, all source files in fenced code blocks, install/run instructions, and tests.",
+      prompt: "You are a world-class PROMPT ENGINEER. Generate 5 powerful, ready-to-use prompts about: [your topic]. For each: give a title, the full prompt, the best model to use, and example output.",
     } as const;
     setInput(prompts[kind]);
-    if (kind === "game") pendingPreview.current = "game";
-    if (kind === "video") pendingPreview.current = "video";
     setTimeout(() => inputRef.current?.focus(), 30);
   };
 
