@@ -413,9 +413,9 @@ const Chat = () => {
 
                 <div className="grid sm:grid-cols-3 gap-3 mt-8 max-w-2xl mx-auto">
                   {[
-                    { icon: Video, label: "Play a Video", color: "text-pink-400", kind: "video" as const },
-                    { icon: ImageIcon, label: "Make a Picture", color: "text-amber-400", kind: "picture" as const },
-                    { icon: Gamepad2, label: "Play a Game", color: "text-emerald-400", kind: "game" as const },
+                    { icon: ClipboardList, label: "Plan", desc: "Architect a project step-by-step", color: "text-sky-400", kind: "plan" as const },
+                    { icon: Hammer, label: "Build", desc: "Generate full production-ready code", color: "text-emerald-400", kind: "build" as const },
+                    { icon: Wand2, label: "Prompt", desc: "Craft powerful AI prompts", color: "text-fuchsia-400", kind: "prompt" as const },
                   ].map((q) => {
                     const Icon = q.icon;
                     return (
@@ -424,6 +424,7 @@ const Chat = () => {
                         className="group p-4 rounded-xl glass hover:bg-secondary/50 transition text-left">
                         <Icon className={`w-5 h-5 mb-2 ${q.color}`} />
                         <p className="text-sm font-medium">{q.label}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{q.desc}</p>
                       </button>
                     );
                   })}
