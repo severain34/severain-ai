@@ -33,6 +33,27 @@ const SAMPLE_VIDEOS = [
   "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
 ];
 
+// Speak text using browser SpeechSynthesis with a chosen voice "persona"
+const speakText = (text: string, kind: "kid" | "woman" | "man") => {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const voices = window.speechSynthesis.getVoices();
+  const lower = (s: string) => s.toLowerCase();
+  const femaleHints = ["female", "woman", "samantha", "victoria", "zira", "google uk english female", "karen", "tessa", "fiona", "amelie", "anna"];
+  const maleHints = ["male", "man", "david", "daniel", "alex", "fred", "google uk english male", "diego", "thomas"];
+  const kidHints = ["kid", "child", "junior", "boy", "girl"];
+  let voice: SpeechSynthesisVoice | undefined;
+  if (kind === "kid") voice = voices.find((v) => kidHints.some((h) => lower(v.name).includes(h)));
+  if (kind === "woman" && !voice) voice = voices.find((v) => femaleHints.some((h) => lower(v.name).includes(h)));
+  if (kind === "man" && !voice) voice = voices.find((v) => maleHints.some((h) => lower(v.name).includes(h)));
+  const u = new SpeechSynthesisUtterance(text.replace(/```[\s\S]*?```/g, "code block.").slice(0, 4000));
+  if (voice) u.voice = voice;
+  if (kind === "kid") { u.pitch = 1.8; u.rate = 1.1; }
+  else if (kind === "woman") { u.pitch = 1.2; u.rate = 1.0; }
+  else { u.pitch = 0.7; u.rate = 0.95; }
+  window.speechSynthesis.speak(u);
+};
+
 const Chat = () => {
   const navigate = useNavigate();
   const [threads, setThreads] = useState<Thread[]>(() => {
