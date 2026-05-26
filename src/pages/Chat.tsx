@@ -54,6 +54,9 @@ const Chat = () => {
   const [theme, setTheme] = useState<"dark" | "light">(
     () => (localStorage.getItem(THEME_KEY) as "dark" | "light") || "dark"
   );
+  const [voiceKind, setVoiceKind] = useState<"kid" | "woman" | "man">(
+    () => (localStorage.getItem("severain_voice") as any) || "woman"
+  );
   const [preview, setPreview] = useState<{ type: "game" | "video"; src: string } | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
