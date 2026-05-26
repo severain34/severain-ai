@@ -657,6 +657,7 @@ const CopyBtn = ({ text, className = "" }: { text: string; className?: string })
 
 const PreWithCopy = ({ children }: { children: React.ReactNode }) => {
   const [copied, setCopied] = useState(false);
+  const [max, setMax] = useState(false);
   const preRef = useRef<HTMLPreElement>(null);
   const handleCopy = () => {
     const text = preRef.current?.innerText || "";
@@ -664,24 +665,56 @@ const PreWithCopy = ({ children }: { children: React.ReactNode }) => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+  const PreNode = (
+    <pre ref={preRef} className={max ? "!mt-0 !rounded-none !max-h-none h-full overflow-auto" : "!mt-0"}>{children}</pre>
+  );
   return (
-    <div className="relative group">
-      <button
-        onClick={handleCopy}
-        className="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-black/40 hover:bg-black/60 backdrop-blur text-white/80 opacity-0 group-hover:opacity-100 transition-opacity text-xs flex items-center gap-1"
-      >
-        {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-        {copied ? "Copied" : "Copy"}
-      </button>
-      <pre ref={preRef} className="!mt-0">{children}</pre>
-    </div>
+    <>
+      <div className="relative group">
+        <div className="absolute top-2 right-2 z-10 flex gap-1">
+          <button
+            onClick={() => setMax(true)}
+            title="Maximize"
+            className="p-1.5 rounded-md bg-black/40 hover:bg-black/60 backdrop-blur text-white/80 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <Maximize2 className="w-3 h-3" />
+          </button>
+          <button
+            onClick={handleCopy}
+            className="p-1.5 rounded-md bg-black/40 hover:bg-black/60 backdrop-blur text-white/80 opacity-0 group-hover:opacity-100 transition-opacity text-xs flex items-center gap-1"
+          >
+            {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+        {!max && PreNode}
+      </div>
+      {max && (
+        <div className="not-prose fixed inset-0 z-[60] bg-background/95 backdrop-blur flex flex-col">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+            <span className="text-xs text-muted-foreground">Code preview</span>
+            <div className="flex gap-2">
+              <button onClick={handleCopy} className="flex items-center gap-1 px-2.5 py-1 rounded-md glass-input text-xs hover:bg-secondary">
+                {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+              <button onClick={() => setMax(false)} className="flex items-center gap-1 px-2.5 py-1 rounded-md glass-input text-xs hover:bg-secondary">
+                <Minimize2 className="w-3 h-3" /> Close
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-auto p-4">{PreNode}</div>
+        </div>
+      )}
+    </>
   );
 };
 
 const Bubble = ({
-  role, content, onPlayGame, onPlayVideo, extractGame, extractVideo,
+  role, content, voiceKind, onPlayGame, onPlayVideo, extractGame, extractVideo,
 }: {
   role: "user" | "assistant"; content: string;
+  voiceKind?: "kid" | "woman" | "man";
   onPlayGame?: (html: string) => void;
   onPlayVideo?: (src: string) => void;
   extractGame?: (t: string) => string | null;
@@ -724,7 +757,14 @@ const Bubble = ({
           </div>
         )}
       </div>
-      <div className="absolute -top-3 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute -top-3 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+        <button
+          onClick={() => speakText(content, voiceKind || "woman")}
+          title="Read aloud"
+          className="p-1.5 rounded-md bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs"
+        >
+          <Volume2 className="w-3.5 h-3.5" />
+        </button>
         <CopyBtn text={content} className="p-1.5 rounded-md bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground flex" />
       </div>
     </div>
