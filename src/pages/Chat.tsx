@@ -4,7 +4,8 @@ import ReactMarkdown from "react-markdown";
 import {
   Send, Plus, Trash2, MessageSquare, Sparkles, Menu, X, Search, PanelLeftClose,
   PanelLeft, Paperclip, Mic, Globe, Crown, LogOut, GraduationCap, Code2, Brain,
-  Video, Image as ImageIcon, Gamepad2, LogIn, Code, Sun, Moon, Play, Copy, Check,
+  LogIn, Code, Sun, Moon, Play, Copy, Check, Maximize2, Minimize2, Volume2,
+  ClipboardList, Hammer, Wand2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -32,6 +33,27 @@ const SAMPLE_VIDEOS = [
   "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
 ];
 
+// Speak text using browser SpeechSynthesis with a chosen voice "persona"
+const speakText = (text: string, kind: "kid" | "woman" | "man") => {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const voices = window.speechSynthesis.getVoices();
+  const lower = (s: string) => s.toLowerCase();
+  const femaleHints = ["female", "woman", "samantha", "victoria", "zira", "google uk english female", "karen", "tessa", "fiona", "amelie", "anna"];
+  const maleHints = ["male", "man", "david", "daniel", "alex", "fred", "google uk english male", "diego", "thomas"];
+  const kidHints = ["kid", "child", "junior", "boy", "girl"];
+  let voice: SpeechSynthesisVoice | undefined;
+  if (kind === "kid") voice = voices.find((v) => kidHints.some((h) => lower(v.name).includes(h)));
+  if (kind === "woman" && !voice) voice = voices.find((v) => femaleHints.some((h) => lower(v.name).includes(h)));
+  if (kind === "man" && !voice) voice = voices.find((v) => maleHints.some((h) => lower(v.name).includes(h)));
+  const u = new SpeechSynthesisUtterance(text.replace(/```[\s\S]*?```/g, "code block.").slice(0, 4000));
+  if (voice) u.voice = voice;
+  if (kind === "kid") { u.pitch = 1.8; u.rate = 1.1; }
+  else if (kind === "woman") { u.pitch = 1.2; u.rate = 1.0; }
+  else { u.pitch = 0.7; u.rate = 0.95; }
+  window.speechSynthesis.speak(u);
+};
+
 const Chat = () => {
   const navigate = useNavigate();
   const [threads, setThreads] = useState<Thread[]>(() => {
@@ -52,6 +74,9 @@ const Chat = () => {
   const [user, setUser] = useState<any>(null);
   const [theme, setTheme] = useState<"dark" | "light">(
     () => (localStorage.getItem(THEME_KEY) as "dark" | "light") || "dark"
+  );
+  const [voiceKind, setVoiceKind] = useState<"kid" | "woman" | "man">(
+    () => (localStorage.getItem("severain_voice") as any) || "woman"
   );
   const [preview, setPreview] = useState<{ type: "game" | "video"; src: string } | null>(null);
 
@@ -89,6 +114,7 @@ const Chat = () => {
   useEffect(() => { if (activeId) localStorage.setItem(ACTIVE_KEY, activeId); }, [activeId]);
   useEffect(() => { localStorage.setItem("severain_mode", mode); }, [mode]);
   useEffect(() => { localStorage.setItem(LANG_KEY, lang); }, [lang]);
+  useEffect(() => { localStorage.setItem("severain_voice", voiceKind); }, [voiceKind]);
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [streamingText, activeId, threads]);
@@ -153,15 +179,13 @@ const Chat = () => {
     return m ? m[0] : null;
   };
 
-  const quickAction = (kind: "video" | "picture" | "game") => {
+  const quickAction = (kind: "plan" | "build" | "prompt") => {
     const prompts = {
-      video: "Describe a beautiful short video scene (just one paragraph, no code).",
-      picture: "Describe a stunning image, ready for Midjourney/DALL·E (one prompt only).",
-      game: "Build a COMPLETE playable HTML5 + JavaScript + Canvas game in a SINGLE ```html``` code block (full <!doctype html> document with <canvas>, game loop, keyboard controls, scoring). Make it fun and polished. Game: a small arcade game of your choice.",
+      plan: "Act as a senior product architect. Create a detailed, step-by-step PLAN for: [describe your project here]. Include goals, milestones, tech stack, file structure, data model, risks, and a timeline.",
+      build: "Act as a senior full-stack engineer. BUILD a complete, production-ready implementation for: [describe what to build]. Provide full file structure, all source files in fenced code blocks, install/run instructions, and tests.",
+      prompt: "You are a world-class PROMPT ENGINEER. Generate 5 powerful, ready-to-use prompts about: [your topic]. For each: give a title, the full prompt, the best model to use, and example output.",
     } as const;
     setInput(prompts[kind]);
-    if (kind === "game") pendingPreview.current = "game";
-    if (kind === "video") pendingPreview.current = "video";
     setTimeout(() => inputRef.current?.focus(), 30);
   };
 
@@ -381,6 +405,21 @@ const Chat = () => {
               <span>Open editor</span>
             </button>
 
+            {/* Voice persona picker */}
+            <div className="relative">
+              <Volume2 className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <select
+                value={voiceKind}
+                onChange={(e) => setVoiceKind(e.target.value as any)}
+                title="Voice for read-aloud"
+                className="pl-8 pr-3 py-1.5 rounded-lg glass-input text-sm outline-none"
+              >
+                <option value="kid">Kid voice</option>
+                <option value="woman">Woman voice</option>
+                <option value="man">Man voice</option>
+              </select>
+            </div>
+
             <div className="relative">
               <Globe className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               <select value={lang} onChange={(e) => setLang(e.target.value)}
@@ -414,9 +453,9 @@ const Chat = () => {
 
                 <div className="grid sm:grid-cols-3 gap-3 mt-8 max-w-2xl mx-auto">
                   {[
-                    { icon: Video, label: "Play a Video", color: "text-pink-400", kind: "video" as const },
-                    { icon: ImageIcon, label: "Make a Picture", color: "text-amber-400", kind: "picture" as const },
-                    { icon: Gamepad2, label: "Play a Game", color: "text-emerald-400", kind: "game" as const },
+                    { icon: ClipboardList, label: "Plan", desc: "Architect a project step-by-step", color: "text-sky-400", kind: "plan" as const },
+                    { icon: Hammer, label: "Build", desc: "Generate full production-ready code", color: "text-emerald-400", kind: "build" as const },
+                    { icon: Wand2, label: "Prompt", desc: "Craft powerful AI prompts", color: "text-fuchsia-400", kind: "prompt" as const },
                   ].map((q) => {
                     const Icon = q.icon;
                     return (
@@ -425,6 +464,7 @@ const Chat = () => {
                         className="group p-4 rounded-xl glass hover:bg-secondary/50 transition text-left">
                         <Icon className={`w-5 h-5 mb-2 ${q.color}`} />
                         <p className="text-sm font-medium">{q.label}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{q.desc}</p>
                       </button>
                     );
                   })}
@@ -433,11 +473,13 @@ const Chat = () => {
             )}
             {messages.map((m, i) => (
               <Bubble key={i} role={m.role} content={m.content}
+                voiceKind={voiceKind}
                 onPlayGame={(html) => setPreview({ type: "game", src: html })}
                 onPlayVideo={(src) => setPreview({ type: "video", src })}
                 extractGame={extractGameHtml} extractVideo={extractVideoUrl} />
             ))}
             {streaming && <Bubble role="assistant" content={streamingText || "Thinking..."}
+              voiceKind={voiceKind}
               extractGame={extractGameHtml} extractVideo={extractVideoUrl} />}
           </div>
         </div>
@@ -615,6 +657,7 @@ const CopyBtn = ({ text, className = "" }: { text: string; className?: string })
 
 const PreWithCopy = ({ children }: { children: React.ReactNode }) => {
   const [copied, setCopied] = useState(false);
+  const [max, setMax] = useState(false);
   const preRef = useRef<HTMLPreElement>(null);
   const handleCopy = () => {
     const text = preRef.current?.innerText || "";
@@ -622,24 +665,56 @@ const PreWithCopy = ({ children }: { children: React.ReactNode }) => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+  const PreNode = (
+    <pre ref={preRef} className={max ? "!mt-0 !rounded-none !max-h-none h-full overflow-auto" : "!mt-0"}>{children}</pre>
+  );
   return (
-    <div className="relative group">
-      <button
-        onClick={handleCopy}
-        className="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-black/40 hover:bg-black/60 backdrop-blur text-white/80 opacity-0 group-hover:opacity-100 transition-opacity text-xs flex items-center gap-1"
-      >
-        {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-        {copied ? "Copied" : "Copy"}
-      </button>
-      <pre ref={preRef} className="!mt-0">{children}</pre>
-    </div>
+    <>
+      <div className="relative group">
+        <div className="absolute top-2 right-2 z-10 flex gap-1">
+          <button
+            onClick={() => setMax(true)}
+            title="Maximize"
+            className="p-1.5 rounded-md bg-black/40 hover:bg-black/60 backdrop-blur text-white/80 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <Maximize2 className="w-3 h-3" />
+          </button>
+          <button
+            onClick={handleCopy}
+            className="p-1.5 rounded-md bg-black/40 hover:bg-black/60 backdrop-blur text-white/80 opacity-0 group-hover:opacity-100 transition-opacity text-xs flex items-center gap-1"
+          >
+            {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+        {!max && PreNode}
+      </div>
+      {max && (
+        <div className="not-prose fixed inset-0 z-[60] bg-background/95 backdrop-blur flex flex-col">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+            <span className="text-xs text-muted-foreground">Code preview</span>
+            <div className="flex gap-2">
+              <button onClick={handleCopy} className="flex items-center gap-1 px-2.5 py-1 rounded-md glass-input text-xs hover:bg-secondary">
+                {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+              <button onClick={() => setMax(false)} className="flex items-center gap-1 px-2.5 py-1 rounded-md glass-input text-xs hover:bg-secondary">
+                <Minimize2 className="w-3 h-3" /> Close
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-auto p-4">{PreNode}</div>
+        </div>
+      )}
+    </>
   );
 };
 
 const Bubble = ({
-  role, content, onPlayGame, onPlayVideo, extractGame, extractVideo,
+  role, content, voiceKind, onPlayGame, onPlayVideo, extractGame, extractVideo,
 }: {
   role: "user" | "assistant"; content: string;
+  voiceKind?: "kid" | "woman" | "man";
   onPlayGame?: (html: string) => void;
   onPlayVideo?: (src: string) => void;
   extractGame?: (t: string) => string | null;
@@ -682,7 +757,14 @@ const Bubble = ({
           </div>
         )}
       </div>
-      <div className="absolute -top-3 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute -top-3 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+        <button
+          onClick={() => speakText(content, voiceKind || "woman")}
+          title="Read aloud"
+          className="p-1.5 rounded-md bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs"
+        >
+          <Volume2 className="w-3.5 h-3.5" />
+        </button>
         <CopyBtn text={content} className="p-1.5 rounded-md bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground flex" />
       </div>
     </div>
