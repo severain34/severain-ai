@@ -93,6 +93,7 @@ const Chat = () => {
   useEffect(() => { if (activeId) localStorage.setItem(ACTIVE_KEY, activeId); }, [activeId]);
   useEffect(() => { localStorage.setItem("severain_mode", mode); }, [mode]);
   useEffect(() => { localStorage.setItem(LANG_KEY, lang); }, [lang]);
+  useEffect(() => { localStorage.setItem("severain_voice", voiceKind); }, [voiceKind]);
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [streamingText, activeId, threads]);
