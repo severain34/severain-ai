@@ -95,8 +95,17 @@ const Chat = () => {
     () => (localStorage.getItem("severain_voice") as any) || "woman"
   );
   const [preview, setPreview] = useState<{ type: "game" | "video"; src: string } | null>(null);
+  const [autoSpeak, setAutoSpeak] = useState(() => localStorage.getItem("severain_auto_speak") === "1");
+  const [banner, setBanner] = useState(() => localStorage.getItem("severain_admin_banner") || "");
+  const isAdmin = typeof window !== "undefined" && localStorage.getItem("severain_admin_unlocked") === "1";
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const recogRef = useRef<any>(null);
+  const pendingPreview = useRef<"game" | "video" | null>(null);
+  const stickToBottomRef = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const recogRef = useRef<any>(null);
