@@ -495,7 +495,13 @@ const Chat = () => {
           </div>
         </header>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+        {banner && (
+          <div className="bg-primary/10 border-b border-primary/30 text-foreground text-sm text-center py-2 px-4">
+            <span className="font-medium">{banner}</span>
+          </div>
+        )}
+
+        <div ref={scrollRef} onScroll={onMessagesScroll} className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
             {messages.length === 0 && !streaming && (
               <div className="text-center py-20">
