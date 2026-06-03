@@ -106,10 +106,6 @@ const Chat = () => {
   const pendingPreview = useRef<"game" | "video" | null>(null);
   const stickToBottomRef = useRef(true);
   const abortRef = useRef<AbortController | null>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const recogRef = useRef<any>(null);
-  const pendingPreview = useRef<"game" | "video" | null>(null);
 
   // Theme
   useEffect(() => {
