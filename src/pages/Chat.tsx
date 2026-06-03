@@ -396,6 +396,11 @@ const Chat = () => {
         </div>
 
         <div className="p-3 border-t border-border space-y-2">
+          <button onClick={() => navigate("/admin")}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg glass-input hover:bg-secondary text-sm">
+            <Shield className="w-4 h-4 text-primary" />
+            {isAdmin ? "Admin panel" : "Sign in as Admin"}
+          </button>
           <button onClick={() => setShowUpgrade(true)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg gradient-primary text-primary-foreground text-sm font-medium">
             <Crown className="w-4 h-4" /> {tr(lang, "upgrade")}
