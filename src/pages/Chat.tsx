@@ -33,11 +33,25 @@ const SAMPLE_VIDEOS = [
   "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
 ];
 
-// Speak text using browser SpeechSynthesis with a chosen voice "persona"
-const speakText = (text: string, kind: "kid" | "woman" | "man") => {
+// Speak text using browser SpeechSynthesis with a chosen voice "persona".
+// Waits for the voice list to load (Chrome populates voices asynchronously).
+const ensureVoices = (): Promise<SpeechSynthesisVoice[]> =>
+  new Promise((resolve) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return resolve([]);
+    const v = window.speechSynthesis.getVoices();
+    if (v && v.length) return resolve(v);
+    const handler = () => {
+      window.speechSynthesis.removeEventListener("voiceschanged", handler);
+      resolve(window.speechSynthesis.getVoices() || []);
+    };
+    window.speechSynthesis.addEventListener("voiceschanged", handler);
+    setTimeout(() => resolve(window.speechSynthesis.getVoices() || []), 1500);
+  });
+
+const speakText = async (text: string, kind: "kid" | "woman" | "man") => {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  const voices = window.speechSynthesis.getVoices();
+  const voices = await ensureVoices();
   const lower = (s: string) => s.toLowerCase();
   const femaleHints = ["female", "woman", "samantha", "victoria", "zira", "google uk english female", "karen", "tessa", "fiona", "amelie", "anna"];
   const maleHints = ["male", "man", "david", "daniel", "alex", "fred", "google uk english male", "diego", "thomas"];
@@ -46,7 +60,9 @@ const speakText = (text: string, kind: "kid" | "woman" | "man") => {
   if (kind === "kid") voice = voices.find((v) => kidHints.some((h) => lower(v.name).includes(h)));
   if (kind === "woman" && !voice) voice = voices.find((v) => femaleHints.some((h) => lower(v.name).includes(h)));
   if (kind === "man" && !voice) voice = voices.find((v) => maleHints.some((h) => lower(v.name).includes(h)));
-  const u = new SpeechSynthesisUtterance(text.replace(/```[\s\S]*?```/g, "code block.").slice(0, 4000));
+  if (!voice) voice = voices.find((v) => v.lang?.startsWith("en")) || voices[0];
+  const clean = text.replace(/```[\s\S]*?```/g, " code block. ").replace(/[#*_>`~]/g, "").slice(0, 4000);
+  const u = new SpeechSynthesisUtterance(clean);
   if (voice) u.voice = voice;
   if (kind === "kid") { u.pitch = 1.8; u.rate = 1.1; }
   else if (kind === "woman") { u.pitch = 1.2; u.rate = 1.0; }
