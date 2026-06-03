@@ -304,13 +304,22 @@ const Chat = () => {
           || SAMPLE_VIDEOS[Math.floor(Math.random() * SAMPLE_VIDEOS.length)];
         setPreview({ type: "video", src: vid });
       }
-    } catch (e) {
-      toast.error((e as Error).message);
+
+      // AI talks back if enabled
+      if (autoSpeak && assistantText) speakText(assistantText, voiceKind);
+    } catch (e: any) {
+      if (e?.name !== "AbortError") toast.error(e?.message || "Request failed");
       setStreamingText("");
     } finally {
+      abortRef.current = null;
       setStreaming(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
+  };
+
+  const stopStreaming = () => {
+    abortRef.current?.abort();
+    if (typeof window !== "undefined") window.speechSynthesis?.cancel();
   };
 
   const logout = async () => { await supabase.auth.signOut(); navigate("/auth"); };
