@@ -570,10 +570,17 @@ const Chat = () => {
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                 placeholder={tr(lang, "message")} rows={1} disabled={streaming}
                 className="flex-1 bg-transparent outline-none resize-none px-2 py-2 max-h-40" />
-              <button onClick={sendMessage} disabled={streaming || !input.trim()}
-                className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center disabled:opacity-40 hover:opacity-90">
-                <Send className="w-4 h-4 text-primary-foreground" />
-              </button>
+              {streaming ? (
+                <button onClick={stopStreaming} title="Stop generating"
+                  className="w-10 h-10 rounded-xl bg-destructive flex items-center justify-center hover:opacity-90">
+                  <Square className="w-4 h-4 text-destructive-foreground fill-current" />
+                </button>
+              ) : (
+                <button onClick={sendMessage} disabled={!input.trim()} title="Send"
+                  className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center disabled:opacity-40 hover:opacity-90">
+                  <ArrowUp className="w-5 h-5 text-primary-foreground" strokeWidth={2.5} />
+                </button>
+              )}
             </div>
             <p className="text-xs text-muted-foreground text-center mt-2">
               Severain AI may produce inaccurate information.
