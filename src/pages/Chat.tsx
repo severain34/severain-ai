@@ -137,8 +137,27 @@ const Chat = () => {
   useEffect(() => { localStorage.setItem(LANG_KEY, lang); }, [lang]);
   useEffect(() => { localStorage.setItem("severain_voice", voiceKind); }, [voiceKind]);
   useEffect(() => {
+    if (!stickToBottomRef.current) return;
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [streamingText, activeId, threads]);
+
+  const onMessagesScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    stickToBottomRef.current = nearBottom;
+  };
+
+  // Refresh banner from admin updates
+  useEffect(() => {
+    const i = setInterval(() => {
+      const b = localStorage.getItem("severain_admin_banner") || "";
+      setBanner((prev) => (prev !== b ? b : prev));
+      const a = localStorage.getItem("severain_auto_speak") === "1";
+      setAutoSpeak((prev) => (prev !== a ? a : prev));
+    }, 1500);
+    return () => clearInterval(i);
+  }, []);
 
   const active = threads.find((t) => t.id === activeId);
 
