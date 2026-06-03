@@ -247,16 +247,22 @@ const Chat = () => {
     ));
 
     setStreaming(true); setStreamingText("");
+    stickToBottomRef.current = true;
+    const ac = new AbortController();
+    abortRef.current = ac;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const url = `https://iijxdopbacltbzrafbka.supabase.co/functions/v1/chat`;
+      const adminSystem = localStorage.getItem("severain_admin_system") || "";
+      const model = localStorage.getItem("severain_model") || "";
       const resp = await fetch(url, {
         method: "POST",
+        signal: ac.signal,
         headers: {
           "Content-Type": "application/json",
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ messages: updated, mode, language: lang, attachment: sentAttachment }),
+        body: JSON.stringify({ messages: updated, mode, language: lang, attachment: sentAttachment, adminSystem, model }),
       });
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({ error: "Request failed" }));
