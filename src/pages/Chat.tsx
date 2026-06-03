@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import {
-  Send, Plus, Trash2, MessageSquare, Sparkles, Menu, X, Search, PanelLeftClose,
+  ArrowUp, Plus, Trash2, MessageSquare, Sparkles, Menu, X, Search, PanelLeftClose,
   PanelLeft, Paperclip, Mic, Globe, Crown, LogOut, GraduationCap, Code2, Brain,
   LogIn, Code, Sun, Moon, Play, Copy, Check, Maximize2, Minimize2, Volume2,
-  ClipboardList, Hammer, Wand2,
+  ClipboardList, Hammer, Wand2, Shield, Square,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -33,11 +33,25 @@ const SAMPLE_VIDEOS = [
   "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
 ];
 
-// Speak text using browser SpeechSynthesis with a chosen voice "persona"
-const speakText = (text: string, kind: "kid" | "woman" | "man") => {
+// Speak text using browser SpeechSynthesis with a chosen voice "persona".
+// Waits for the voice list to load (Chrome populates voices asynchronously).
+const ensureVoices = (): Promise<SpeechSynthesisVoice[]> =>
+  new Promise((resolve) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return resolve([]);
+    const v = window.speechSynthesis.getVoices();
+    if (v && v.length) return resolve(v);
+    const handler = () => {
+      window.speechSynthesis.removeEventListener("voiceschanged", handler);
+      resolve(window.speechSynthesis.getVoices() || []);
+    };
+    window.speechSynthesis.addEventListener("voiceschanged", handler);
+    setTimeout(() => resolve(window.speechSynthesis.getVoices() || []), 1500);
+  });
+
+const speakText = async (text: string, kind: "kid" | "woman" | "man") => {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  const voices = window.speechSynthesis.getVoices();
+  const voices = await ensureVoices();
   const lower = (s: string) => s.toLowerCase();
   const femaleHints = ["female", "woman", "samantha", "victoria", "zira", "google uk english female", "karen", "tessa", "fiona", "amelie", "anna"];
   const maleHints = ["male", "man", "david", "daniel", "alex", "fred", "google uk english male", "diego", "thomas"];
@@ -46,7 +60,9 @@ const speakText = (text: string, kind: "kid" | "woman" | "man") => {
   if (kind === "kid") voice = voices.find((v) => kidHints.some((h) => lower(v.name).includes(h)));
   if (kind === "woman" && !voice) voice = voices.find((v) => femaleHints.some((h) => lower(v.name).includes(h)));
   if (kind === "man" && !voice) voice = voices.find((v) => maleHints.some((h) => lower(v.name).includes(h)));
-  const u = new SpeechSynthesisUtterance(text.replace(/```[\s\S]*?```/g, "code block.").slice(0, 4000));
+  if (!voice) voice = voices.find((v) => v.lang?.startsWith("en")) || voices[0];
+  const clean = text.replace(/```[\s\S]*?```/g, " code block. ").replace(/[#*_>`~]/g, "").slice(0, 4000);
+  const u = new SpeechSynthesisUtterance(clean);
   if (voice) u.voice = voice;
   if (kind === "kid") { u.pitch = 1.8; u.rate = 1.1; }
   else if (kind === "woman") { u.pitch = 1.2; u.rate = 1.0; }
@@ -79,12 +95,17 @@ const Chat = () => {
     () => (localStorage.getItem("severain_voice") as any) || "woman"
   );
   const [preview, setPreview] = useState<{ type: "game" | "video"; src: string } | null>(null);
+  const [autoSpeak, setAutoSpeak] = useState(() => localStorage.getItem("severain_auto_speak") === "1");
+  const [banner, setBanner] = useState(() => localStorage.getItem("severain_admin_banner") || "");
+  const isAdmin = typeof window !== "undefined" && localStorage.getItem("severain_admin_unlocked") === "1";
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const recogRef = useRef<any>(null);
   const pendingPreview = useRef<"game" | "video" | null>(null);
+  const stickToBottomRef = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Theme
   useEffect(() => {
@@ -116,8 +137,27 @@ const Chat = () => {
   useEffect(() => { localStorage.setItem(LANG_KEY, lang); }, [lang]);
   useEffect(() => { localStorage.setItem("severain_voice", voiceKind); }, [voiceKind]);
   useEffect(() => {
+    if (!stickToBottomRef.current) return;
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [streamingText, activeId, threads]);
+
+  const onMessagesScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    stickToBottomRef.current = nearBottom;
+  };
+
+  // Refresh banner from admin updates
+  useEffect(() => {
+    const i = setInterval(() => {
+      const b = localStorage.getItem("severain_admin_banner") || "";
+      setBanner((prev) => (prev !== b ? b : prev));
+      const a = localStorage.getItem("severain_auto_speak") === "1";
+      setAutoSpeak((prev) => (prev !== a ? a : prev));
+    }, 1500);
+    return () => clearInterval(i);
+  }, []);
 
   const active = threads.find((t) => t.id === activeId);
 
@@ -207,16 +247,22 @@ const Chat = () => {
     ));
 
     setStreaming(true); setStreamingText("");
+    stickToBottomRef.current = true;
+    const ac = new AbortController();
+    abortRef.current = ac;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const url = `https://iijxdopbacltbzrafbka.supabase.co/functions/v1/chat`;
+      const adminSystem = localStorage.getItem("severain_admin_system") || "";
+      const model = localStorage.getItem("severain_model") || "";
       const resp = await fetch(url, {
         method: "POST",
+        signal: ac.signal,
         headers: {
           "Content-Type": "application/json",
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ messages: updated, mode, language: lang, attachment: sentAttachment }),
+        body: JSON.stringify({ messages: updated, mode, language: lang, attachment: sentAttachment, adminSystem, model }),
       });
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({ error: "Request failed" }));
@@ -258,13 +304,22 @@ const Chat = () => {
           || SAMPLE_VIDEOS[Math.floor(Math.random() * SAMPLE_VIDEOS.length)];
         setPreview({ type: "video", src: vid });
       }
-    } catch (e) {
-      toast.error((e as Error).message);
+
+      // AI talks back if enabled
+      if (autoSpeak && assistantText) speakText(assistantText, voiceKind);
+    } catch (e: any) {
+      if (e?.name !== "AbortError") toast.error(e?.message || "Request failed");
       setStreamingText("");
     } finally {
+      abortRef.current = null;
       setStreaming(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
+  };
+
+  const stopStreaming = () => {
+    abortRef.current?.abort();
+    if (typeof window !== "undefined") window.speechSynthesis?.cancel();
   };
 
   const logout = async () => { await supabase.auth.signOut(); navigate("/auth"); };
@@ -341,6 +396,11 @@ const Chat = () => {
         </div>
 
         <div className="p-3 border-t border-border space-y-2">
+          <button onClick={() => navigate("/admin")}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg glass-input hover:bg-secondary text-sm">
+            <Shield className="w-4 h-4 text-primary" />
+            {isAdmin ? "Admin panel" : "Sign in as Admin"}
+          </button>
           <button onClick={() => setShowUpgrade(true)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg gradient-primary text-primary-foreground text-sm font-medium">
             <Crown className="w-4 h-4" /> {tr(lang, "upgrade")}
@@ -440,7 +500,13 @@ const Chat = () => {
           </div>
         </header>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+        {banner && (
+          <div className="bg-primary/10 border-b border-primary/30 text-foreground text-sm text-center py-2 px-4">
+            <span className="font-medium">{banner}</span>
+          </div>
+        )}
+
+        <div ref={scrollRef} onScroll={onMessagesScroll} className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
             {messages.length === 0 && !streaming && (
               <div className="text-center py-20">
@@ -509,10 +575,17 @@ const Chat = () => {
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                 placeholder={tr(lang, "message")} rows={1} disabled={streaming}
                 className="flex-1 bg-transparent outline-none resize-none px-2 py-2 max-h-40" />
-              <button onClick={sendMessage} disabled={streaming || !input.trim()}
-                className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center disabled:opacity-40 hover:opacity-90">
-                <Send className="w-4 h-4 text-primary-foreground" />
-              </button>
+              {streaming ? (
+                <button onClick={stopStreaming} title="Stop generating"
+                  className="w-10 h-10 rounded-xl bg-destructive flex items-center justify-center hover:opacity-90">
+                  <Square className="w-4 h-4 text-destructive-foreground fill-current" />
+                </button>
+              ) : (
+                <button onClick={sendMessage} disabled={!input.trim()} title="Send"
+                  className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center disabled:opacity-40 hover:opacity-90">
+                  <ArrowUp className="w-5 h-5 text-primary-foreground" strokeWidth={2.5} />
+                </button>
+              )}
             </div>
             <p className="text-xs text-muted-foreground text-center mt-2">
               Severain AI may produce inaccurate information.
