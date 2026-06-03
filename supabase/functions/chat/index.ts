@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, mode, language, attachment } = await req.json();
+    const { messages, mode, language, attachment, adminSystem, model } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -34,7 +34,10 @@ Deno.serve(async (req) => {
     const langPrompt = language && language !== "en"
       ? `Always reply in this language code: ${language}.`
       : "";
-    const system = [BASE, modePrompt, langPrompt].filter(Boolean).join("\n\n");
+    const adminPrompt = typeof adminSystem === "string" && adminSystem.trim()
+      ? `ADMIN TRAINING (highest priority, set by Senganeza Severain):\n${adminSystem.trim()}`
+      : "";
+    const system = [BASE, modePrompt, langPrompt, adminPrompt].filter(Boolean).join("\n\n");
 
     const finalMessages = [...messages];
     if (attachment?.content) {
@@ -44,6 +47,13 @@ Deno.serve(async (req) => {
       }
     }
 
+    const ALLOWED = new Set([
+      "google/gemini-2.5-flash", "google/gemini-2.5-pro", "google/gemini-2.5-flash-lite",
+      "google/gemini-3-flash-preview", "google/gemini-3.5-flash",
+      "openai/gpt-5", "openai/gpt-5-mini", "openai/gpt-5-nano",
+    ]);
+    const chosenModel = ALLOWED.has(model) ? model : "google/gemini-2.5-flash";
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -51,7 +61,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: chosenModel,
         stream: true,
         messages: [{ role: "system", content: system }, ...finalMessages],
       }),
