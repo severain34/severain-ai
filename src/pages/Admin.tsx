@@ -256,6 +256,63 @@ const Admin = () => {
             className="w-full rounded-lg glass-input p-2 text-sm outline-none" />
         </section>
 
+        {/* Users & activity */}
+        <section className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Users className="w-4 h-4 text-primary" />
+            <h2 className="font-semibold">Users & activity</h2>
+            <span className="ml-2 text-xs text-muted-foreground">{onlineCount} online · {users.length} total</span>
+            <button onClick={clearActivity} className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive">
+              <Trash2 className="w-3 h-3" /> Clear logs
+            </button>
+          </div>
+          {users.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No user activity yet. Open the chat in another tab to see it appear here.</p>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-3">
+              <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
+                {users.map((u: any) => (
+                  <button key={u.id} onClick={() => setSelectedUser(u)}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm ${selectedUser?.id === u.id ? "bg-secondary" : "glass-input hover:bg-secondary/60"}`}>
+                    <Circle className={`w-2.5 h-2.5 ${u.online ? "fill-green-500 text-green-500" : "fill-muted-foreground text-muted-foreground"}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate font-medium">{u.email || "Guest"}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {u.online ? "Online now" : `Last seen ${new Date(u.lastSeen).toLocaleString()}`}
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">{u.actions?.length || 0} acts</span>
+                  </button>
+                ))}
+              </div>
+              <div className="glass-input rounded-xl p-3 max-h-72 overflow-y-auto">
+                {selectedUser ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Activity className="w-4 h-4 text-primary" />
+                      <span className="font-medium text-sm truncate">{selectedUser.email || "Guest"}</span>
+                      <button onClick={() => removeUser(selectedUser.id)} className="ml-auto text-xs text-destructive hover:underline">Remove</button>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {(selectedUser.actions || []).map((a: any, i: number) => (
+                        <li key={i} className="text-xs border-l-2 border-primary/40 pl-2">
+                          <div className="text-foreground">{a.action}{a.detail ? `: ${a.detail}` : ""}</div>
+                          <div className="text-[10px] text-muted-foreground">{new Date(a.at).toLocaleString()}</div>
+                        </li>
+                      ))}
+                      {(!selectedUser.actions || selectedUser.actions.length === 0) && (
+                        <p className="text-xs text-muted-foreground">No actions yet.</p>
+                      )}
+                    </ul>
+                  </>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Select a user to see their actions and online status.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+
         {/* Data management */}
         <section className="glass rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-3">
