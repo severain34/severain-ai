@@ -45,6 +45,36 @@ const Admin = () => {
     } catch { return { threads: 0, messages: 0 }; }
   }, [unlocked]);
 
+  // Live users panel
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const i = setInterval(() => setTick((x) => x + 1), 3000); return () => clearInterval(i); }, []);
+  const users = useMemo(() => {
+    try {
+      const all = JSON.parse(localStorage.getItem(ACTIVITY_KEY) || "{}");
+      const now = Date.now();
+      return Object.values(all).map((u: any) => ({
+        ...u,
+        online: u.online && now - u.lastSeen < 45000,
+      })).sort((a: any, b: any) => b.lastSeen - a.lastSeen);
+    } catch { return []; }
+  }, [unlocked, tick]);
+  const onlineCount = users.filter((u: any) => u.online).length;
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+
+  const clearActivity = () => {
+    if (!confirm("Clear all user activity logs?")) return;
+    localStorage.removeItem(ACTIVITY_KEY);
+    toast.success("Activity cleared");
+  };
+  const removeUser = (id: string) => {
+    const all = JSON.parse(localStorage.getItem(ACTIVITY_KEY) || "{}");
+    delete all[id];
+    localStorage.setItem(ACTIVITY_KEY, JSON.stringify(all));
+    setSelectedUser(null);
+    toast.success("User removed from logs");
+  };
+
+
   useEffect(() => { if (unlocked) localStorage.setItem(ADMIN_PIN_KEY, "1"); }, [unlocked]);
 
   const tryUnlock = () => {
