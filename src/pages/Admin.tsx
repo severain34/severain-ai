@@ -191,7 +191,7 @@ const Admin = () => {
         <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Stat icon={MessageSquare} label="Total chats" value={stats.threads} color="text-blue-400" />
           <Stat icon={Bot} label="Total messages" value={stats.messages} color="text-purple-400" />
-          <Stat icon={Users} label="Local users" value={1} color="text-emerald-400" />
+          <Stat icon={Users} label={`Users (${onlineCount} online)`} value={users.length} color="text-emerald-400" />
           <Stat icon={Cpu} label="Active model" value={model.split("/")[1]} color="text-pink-400" />
         </section>
 
