@@ -408,7 +408,16 @@ const Chat = () => {
       }
 
       // AI talks back if enabled
-      if (autoSpeak && assistantText) speakText(assistantText, voiceKind);
+      // Auto-speak when enabled or in call mode; after speech ends in call mode, listen again
+      const shouldSpeak = (autoSpeak || callModeRef.current) && !!assistantText;
+      if (shouldSpeak) {
+        speakText(assistantText, voiceKind, () => {
+          if (callModeRef.current) setTimeout(() => startListeningOnce(), 250);
+        });
+      } else if (callModeRef.current) {
+        setTimeout(() => startListeningOnce(), 250);
+      }
+      logActivity(user, "sent_message", text);
     } catch (e: any) {
       if (e?.name !== "AbortError") toast.error(e?.message || "Request failed");
       setStreamingText("");
