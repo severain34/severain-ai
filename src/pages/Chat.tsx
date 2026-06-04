@@ -685,9 +685,13 @@ const Chat = () => {
                 className="w-9 h-9 rounded-lg hover:bg-secondary flex items-center justify-center text-muted-foreground">
                 <Paperclip className="w-4 h-4" />
               </button>
-              <button onClick={toggleVoice} title="Voice input"
-                className={`w-9 h-9 rounded-lg hover:bg-secondary flex items-center justify-center ${listening ? "text-destructive animate-pulse" : "text-muted-foreground"}`}>
+              <button onClick={toggleVoice} title="Voice input (push to talk)"
+                className={`w-9 h-9 rounded-lg hover:bg-secondary flex items-center justify-center ${listening && !callMode ? "text-destructive animate-pulse" : "text-muted-foreground"}`}>
                 <Mic className="w-4 h-4" />
+              </button>
+              <button onClick={toggleCallMode} title={callMode ? "End call" : "Start hands-free voice call"}
+                className={`w-9 h-9 rounded-lg flex items-center justify-center ${callMode ? "bg-destructive text-destructive-foreground animate-pulse" : "hover:bg-secondary text-muted-foreground"}`}>
+                {callMode ? <PhoneOff className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
               </button>
               <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
