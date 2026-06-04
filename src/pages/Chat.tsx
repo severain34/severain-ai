@@ -5,7 +5,7 @@ import {
   ArrowUp, Plus, Trash2, MessageSquare, Sparkles, Menu, X, Search, PanelLeftClose,
   PanelLeft, Paperclip, Mic, Globe, Crown, LogOut, GraduationCap, Code2, Brain,
   LogIn, Code, Sun, Moon, Play, Copy, Check, Maximize2, Minimize2, Volume2,
-  ClipboardList, Hammer, Wand2, Shield, Square,
+  ClipboardList, Hammer, Wand2, Shield, Square, Phone, PhoneOff, Settings, User as UserIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -48,8 +48,12 @@ const ensureVoices = (): Promise<SpeechSynthesisVoice[]> =>
     setTimeout(() => resolve(window.speechSynthesis.getVoices() || []), 1500);
   });
 
-const speakText = async (text: string, kind: "kid" | "woman" | "man") => {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
+const speakText = async (
+  text: string,
+  kind: "kid" | "woman" | "man",
+  onEnd?: () => void,
+) => {
+  if (typeof window === "undefined" || !window.speechSynthesis) { onEnd?.(); return; }
   window.speechSynthesis.cancel();
   const voices = await ensureVoices();
   const lower = (s: string) => s.toLowerCase();
@@ -67,7 +71,37 @@ const speakText = async (text: string, kind: "kid" | "woman" | "man") => {
   if (kind === "kid") { u.pitch = 1.8; u.rate = 1.1; }
   else if (kind === "woman") { u.pitch = 1.2; u.rate = 1.0; }
   else { u.pitch = 0.7; u.rate = 0.95; }
+  u.onend = () => onEnd?.();
+  u.onerror = () => onEnd?.();
   window.speechSynthesis.speak(u);
+};
+
+// Tracks activity log for admin
+const ACTIVITY_KEY = "severain_user_activity";
+const logActivity = (user: { id?: string; email?: string } | null, action: string, detail?: string) => {
+  try {
+    const id = user?.id || user?.email || "guest";
+    const all = JSON.parse(localStorage.getItem(ACTIVITY_KEY) || "{}");
+    const u = all[id] || { id, email: user?.email || "Guest", actions: [], lastSeen: 0, online: false };
+    u.email = user?.email || u.email;
+    u.lastSeen = Date.now();
+    u.online = true;
+    u.actions = [{ at: Date.now(), action, detail: detail?.slice(0, 120) || "" }, ...(u.actions || [])].slice(0, 100);
+    all[id] = u;
+    localStorage.setItem(ACTIVITY_KEY, JSON.stringify(all));
+  } catch {}
+};
+const heartbeat = (user: { id?: string; email?: string } | null) => {
+  try {
+    const id = user?.id || user?.email || "guest";
+    const all = JSON.parse(localStorage.getItem(ACTIVITY_KEY) || "{}");
+    const u = all[id] || { id, email: user?.email || "Guest", actions: [], lastSeen: 0, online: true };
+    u.email = user?.email || u.email;
+    u.lastSeen = Date.now();
+    u.online = true;
+    all[id] = u;
+    localStorage.setItem(ACTIVITY_KEY, JSON.stringify(all));
+  } catch {}
 };
 
 const Chat = () => {
@@ -98,10 +132,15 @@ const Chat = () => {
   const [autoSpeak, setAutoSpeak] = useState(() => localStorage.getItem("severain_auto_speak") === "1");
   const [banner, setBanner] = useState(() => localStorage.getItem("severain_admin_banner") || "");
   const isAdmin = typeof window !== "undefined" && localStorage.getItem("severain_admin_unlocked") === "1";
+  const [callMode, setCallMode] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [displayName, setDisplayName] = useState(() => localStorage.getItem("severain_display_name") || "");
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const callModeRef = useRef(false);
+  useEffect(() => { callModeRef.current = callMode; }, [callMode]);
   const recogRef = useRef<any>(null);
   const pendingPreview = useRef<"game" | "video" | null>(null);
   const stickToBottomRef = useRef(true);
@@ -120,6 +159,22 @@ const Chat = () => {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // Presence heartbeat for admin "Users online"
+  useEffect(() => {
+    heartbeat(user);
+    logActivity(user, "opened_chat");
+    const i = setInterval(() => heartbeat(user), 15000);
+    const offline = () => {
+      try {
+        const id = user?.id || user?.email || "guest";
+        const all = JSON.parse(localStorage.getItem(ACTIVITY_KEY) || "{}");
+        if (all[id]) { all[id].online = false; localStorage.setItem(ACTIVITY_KEY, JSON.stringify(all)); }
+      } catch {}
+    };
+    window.addEventListener("beforeunload", offline);
+    return () => { clearInterval(i); window.removeEventListener("beforeunload", offline); offline(); };
+  }, [user]);
 
   useEffect(() => {
     if (threads.length === 0) {
@@ -202,6 +257,53 @@ const Chat = () => {
     r.onend = () => setListening(false);
     r.onerror = () => setListening(false);
     recogRef.current = r; r.start(); setListening(true);
+  };
+
+  // Hands-free voice conversation. Stop talking → auto-send. AI finishes speaking → listen again.
+  const startListeningOnce = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { toast.error("Voice not supported in this browser"); setCallMode(false); return; }
+    try { window.speechSynthesis?.cancel(); } catch {}
+    const r = new SR();
+    r.lang = lang === "en" ? "en-US" : lang;
+    r.continuous = false; r.interimResults = true;
+    let finalText = "";
+    r.onresult = (ev: any) => {
+      let interim = "";
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const res = ev.results[i];
+        if (res.isFinal) finalText += res[0].transcript;
+        else interim += res[0].transcript;
+      }
+      setInput(finalText + interim);
+    };
+    r.onerror = () => setListening(false);
+    r.onend = () => {
+      setListening(false);
+      const text = finalText.trim();
+      if (callModeRef.current && text) {
+        setInput(text);
+        setTimeout(() => sendMessage(), 50);
+      } else if (callModeRef.current) {
+        setTimeout(() => callModeRef.current && startListeningOnce(), 400);
+      }
+    };
+    recogRef.current = r;
+    try { r.start(); setListening(true); } catch {}
+  };
+
+  const toggleCallMode = () => {
+    if (callMode) {
+      setCallMode(false);
+      recogRef.current?.stop();
+      try { window.speechSynthesis?.cancel(); } catch {}
+      setListening(false);
+      toast.message("Call ended");
+    } else {
+      setCallMode(true);
+      toast.success("Call started — just talk, I'm listening");
+      setTimeout(() => startListeningOnce(), 100);
+    }
   };
 
   // Extract a runnable HTML game from assistant text
@@ -306,7 +408,16 @@ const Chat = () => {
       }
 
       // AI talks back if enabled
-      if (autoSpeak && assistantText) speakText(assistantText, voiceKind);
+      // Auto-speak when enabled or in call mode; after speech ends in call mode, listen again
+      const shouldSpeak = (autoSpeak || callModeRef.current) && !!assistantText;
+      if (shouldSpeak) {
+        speakText(assistantText, voiceKind, () => {
+          if (callModeRef.current) setTimeout(() => startListeningOnce(), 250);
+        });
+      } else if (callModeRef.current) {
+        setTimeout(() => startListeningOnce(), 250);
+      }
+      logActivity(user, "sent_message", text);
     } catch (e: any) {
       if (e?.name !== "AbortError") toast.error(e?.message || "Request failed");
       setStreamingText("");
@@ -396,17 +507,23 @@ const Chat = () => {
         </div>
 
         <div className="p-3 border-t border-border space-y-2">
-          <button onClick={() => navigate("/admin")}
+          {isAdmin && (
+            <button onClick={() => navigate("/admin")}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg glass-input hover:bg-secondary text-sm">
+              <Shield className="w-4 h-4 text-primary" />
+              Admin panel
+            </button>
+          )}
+          <button onClick={() => setShowSettings(true)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg glass-input hover:bg-secondary text-sm">
-            <Shield className="w-4 h-4 text-primary" />
-            {isAdmin ? "Admin panel" : "Sign in as Admin"}
+            <Settings className="w-4 h-4" /> Account settings
           </button>
           <button onClick={() => setShowUpgrade(true)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg gradient-primary text-primary-foreground text-sm font-medium">
             <Crown className="w-4 h-4" /> {tr(lang, "upgrade")}
           </button>
           <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
-            <span className="truncate flex-1">{user?.email || "Guest"}</span>
+            <span className="truncate flex-1">{displayName || user?.email || "Guest"}</span>
             {user ? (
               <button onClick={logout} title={tr(lang, "logout")} className="hover:text-foreground">
                 <LogOut className="w-4 h-4" />
@@ -419,6 +536,7 @@ const Chat = () => {
           </div>
         </div>
       </aside>
+
 
       {/* Main */}
       <main className="flex-1 flex flex-col min-w-0 relative z-10">
@@ -567,9 +685,13 @@ const Chat = () => {
                 className="w-9 h-9 rounded-lg hover:bg-secondary flex items-center justify-center text-muted-foreground">
                 <Paperclip className="w-4 h-4" />
               </button>
-              <button onClick={toggleVoice} title="Voice input"
-                className={`w-9 h-9 rounded-lg hover:bg-secondary flex items-center justify-center ${listening ? "text-destructive animate-pulse" : "text-muted-foreground"}`}>
+              <button onClick={toggleVoice} title="Voice input (push to talk)"
+                className={`w-9 h-9 rounded-lg hover:bg-secondary flex items-center justify-center ${listening && !callMode ? "text-destructive animate-pulse" : "text-muted-foreground"}`}>
                 <Mic className="w-4 h-4" />
+              </button>
+              <button onClick={toggleCallMode} title={callMode ? "End call" : "Start hands-free voice call"}
+                className={`w-9 h-9 rounded-lg flex items-center justify-center ${callMode ? "bg-destructive text-destructive-foreground animate-pulse" : "hover:bg-secondary text-muted-foreground"}`}>
+                {callMode ? <PhoneOff className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
               </button>
               <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
@@ -597,6 +719,63 @@ const Chat = () => {
       {mobileOpen && <div className="md:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setMobileOpen(false)} />}
 
       {/* Upgrade modal */}
+      {showSettings && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setShowSettings(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="glass rounded-2xl p-6 max-w-md w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold flex items-center gap-2"><UserIcon className="w-5 h-5 text-primary" /> Account settings</h2>
+              <button onClick={() => setShowSettings(false)}><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4 text-sm">
+              <div>
+                <label className="text-xs text-muted-foreground">Email</label>
+                <div className="mt-1 px-3 py-2 rounded-lg glass-input">{user?.email || "Not signed in"}</div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Display name</label>
+                <input value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="What should I call you?"
+                  className="w-full mt-1 px-3 py-2 rounded-lg glass-input outline-none text-foreground" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Theme</label>
+                  <select value={theme} onChange={(e) => setTheme(e.target.value as any)}
+                    className="w-full mt-1 px-3 py-2 rounded-lg glass-input outline-none text-foreground">
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Default voice</label>
+                  <select value={voiceKind} onChange={(e) => setVoiceKind(e.target.value as any)}
+                    className="w-full mt-1 px-3 py-2 rounded-lg glass-input outline-none text-foreground">
+                    <option value="kid">Kid</option>
+                    <option value="woman">Woman</option>
+                    <option value="man">Man</option>
+                  </select>
+                </div>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={autoSpeak}
+                  onChange={(e) => { setAutoSpeak(e.target.checked); localStorage.setItem("severain_auto_speak", e.target.checked ? "1" : "0"); }} />
+                Auto-speak every assistant reply
+              </label>
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => { localStorage.setItem("severain_display_name", displayName); toast.success("Saved"); setShowSettings(false); }}
+                  className="flex-1 py-2 rounded-lg gradient-primary text-primary-foreground font-medium">Save</button>
+                {user && (
+                  <button onClick={logout} className="px-4 py-2 rounded-lg bg-destructive/20 text-destructive font-medium">
+                    Sign out
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showUpgrade && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setShowUpgrade(false)}>
           <div onClick={(e) => e.stopPropagation()}
@@ -811,7 +990,7 @@ const Bubble = ({
   const video = extractVideo?.(content) || null;
   return (
     <div className="group animate-in fade-in duration-300 relative">
-      <div className="chat-prose prose prose-invert max-w-none prose-pre:bg-secondary prose-pre:border prose-pre:border-border prose-code:text-foreground prose-headings:text-foreground prose-p:text-foreground/90">
+      <div className="chat-prose prose max-w-none prose-pre:bg-secondary prose-pre:border prose-pre:border-border prose-pre:text-foreground prose-code:text-foreground prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-li:text-foreground prose-blockquote:text-foreground prose-a:text-primary prose-em:text-foreground">
         <ReactMarkdown components={{ pre: PreWithCopy }}>{content}</ReactMarkdown>
         {(game || video) && (
           <div className="not-prose flex gap-2 mt-3">

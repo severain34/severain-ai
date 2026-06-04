@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Shield, ArrowLeft, Save, Trash2, Bot, MessageSquare, Users, Sparkles,
-  Megaphone, Cpu, KeyRound, Download, RotateCcw, Eye, EyeOff,
+  Megaphone, Cpu, KeyRound, Download, RotateCcw, Eye, EyeOff, Circle, Activity,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -12,6 +12,7 @@ const ADMIN_MODEL_KEY = "severain_model";
 const ADMIN_BANNER_KEY = "severain_admin_banner";
 const ADMIN_AUTOSPEAK_KEY = "severain_auto_speak";
 const THREADS_KEY = "severain_threads_v2";
+const ACTIVITY_KEY = "severain_user_activity";
 const DEFAULT_PIN = "severain2026";
 
 const MODELS = [
@@ -43,6 +44,36 @@ const Admin = () => {
       return { threads: threads.length, messages };
     } catch { return { threads: 0, messages: 0 }; }
   }, [unlocked]);
+
+  // Live users panel
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const i = setInterval(() => setTick((x) => x + 1), 3000); return () => clearInterval(i); }, []);
+  const users = useMemo(() => {
+    try {
+      const all = JSON.parse(localStorage.getItem(ACTIVITY_KEY) || "{}");
+      const now = Date.now();
+      return Object.values(all).map((u: any) => ({
+        ...u,
+        online: u.online && now - u.lastSeen < 45000,
+      })).sort((a: any, b: any) => b.lastSeen - a.lastSeen);
+    } catch { return []; }
+  }, [unlocked, tick]);
+  const onlineCount = users.filter((u: any) => u.online).length;
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+
+  const clearActivity = () => {
+    if (!confirm("Clear all user activity logs?")) return;
+    localStorage.removeItem(ACTIVITY_KEY);
+    toast.success("Activity cleared");
+  };
+  const removeUser = (id: string) => {
+    const all = JSON.parse(localStorage.getItem(ACTIVITY_KEY) || "{}");
+    delete all[id];
+    localStorage.setItem(ACTIVITY_KEY, JSON.stringify(all));
+    setSelectedUser(null);
+    toast.success("User removed from logs");
+  };
+
 
   useEffect(() => { if (unlocked) localStorage.setItem(ADMIN_PIN_KEY, "1"); }, [unlocked]);
 
@@ -160,7 +191,7 @@ const Admin = () => {
         <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Stat icon={MessageSquare} label="Total chats" value={stats.threads} color="text-blue-400" />
           <Stat icon={Bot} label="Total messages" value={stats.messages} color="text-purple-400" />
-          <Stat icon={Users} label="Local users" value={1} color="text-emerald-400" />
+          <Stat icon={Users} label={`Users (${onlineCount} online)`} value={users.length} color="text-emerald-400" />
           <Stat icon={Cpu} label="Active model" value={model.split("/")[1]} color="text-pink-400" />
         </section>
 
@@ -223,6 +254,63 @@ const Admin = () => {
           <input value={banner} onChange={(e) => setBanner(e.target.value)}
             placeholder="e.g. 🎉 Severain AI Pro is now 30% off this week!"
             className="w-full rounded-lg glass-input p-2 text-sm outline-none" />
+        </section>
+
+        {/* Users & activity */}
+        <section className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Users className="w-4 h-4 text-primary" />
+            <h2 className="font-semibold">Users & activity</h2>
+            <span className="ml-2 text-xs text-muted-foreground">{onlineCount} online · {users.length} total</span>
+            <button onClick={clearActivity} className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive">
+              <Trash2 className="w-3 h-3" /> Clear logs
+            </button>
+          </div>
+          {users.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No user activity yet. Open the chat in another tab to see it appear here.</p>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-3">
+              <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
+                {users.map((u: any) => (
+                  <button key={u.id} onClick={() => setSelectedUser(u)}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm ${selectedUser?.id === u.id ? "bg-secondary" : "glass-input hover:bg-secondary/60"}`}>
+                    <Circle className={`w-2.5 h-2.5 ${u.online ? "fill-green-500 text-green-500" : "fill-muted-foreground text-muted-foreground"}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate font-medium">{u.email || "Guest"}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {u.online ? "Online now" : `Last seen ${new Date(u.lastSeen).toLocaleString()}`}
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">{u.actions?.length || 0} acts</span>
+                  </button>
+                ))}
+              </div>
+              <div className="glass-input rounded-xl p-3 max-h-72 overflow-y-auto">
+                {selectedUser ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Activity className="w-4 h-4 text-primary" />
+                      <span className="font-medium text-sm truncate">{selectedUser.email || "Guest"}</span>
+                      <button onClick={() => removeUser(selectedUser.id)} className="ml-auto text-xs text-destructive hover:underline">Remove</button>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {(selectedUser.actions || []).map((a: any, i: number) => (
+                        <li key={i} className="text-xs border-l-2 border-primary/40 pl-2">
+                          <div className="text-foreground">{a.action}{a.detail ? `: ${a.detail}` : ""}</div>
+                          <div className="text-[10px] text-muted-foreground">{new Date(a.at).toLocaleString()}</div>
+                        </li>
+                      ))}
+                      {(!selectedUser.actions || selectedUser.actions.length === 0) && (
+                        <p className="text-xs text-muted-foreground">No actions yet.</p>
+                      )}
+                    </ul>
+                  </>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Select a user to see their actions and online status.</p>
+                )}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Data management */}
