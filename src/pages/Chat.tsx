@@ -48,8 +48,12 @@ const ensureVoices = (): Promise<SpeechSynthesisVoice[]> =>
     setTimeout(() => resolve(window.speechSynthesis.getVoices() || []), 1500);
   });
 
-const speakText = async (text: string, kind: "kid" | "woman" | "man") => {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
+const speakText = async (
+  text: string,
+  kind: "kid" | "woman" | "man",
+  onEnd?: () => void,
+) => {
+  if (typeof window === "undefined" || !window.speechSynthesis) { onEnd?.(); return; }
   window.speechSynthesis.cancel();
   const voices = await ensureVoices();
   const lower = (s: string) => s.toLowerCase();
@@ -67,7 +71,37 @@ const speakText = async (text: string, kind: "kid" | "woman" | "man") => {
   if (kind === "kid") { u.pitch = 1.8; u.rate = 1.1; }
   else if (kind === "woman") { u.pitch = 1.2; u.rate = 1.0; }
   else { u.pitch = 0.7; u.rate = 0.95; }
+  u.onend = () => onEnd?.();
+  u.onerror = () => onEnd?.();
   window.speechSynthesis.speak(u);
+};
+
+// Tracks activity log for admin
+const ACTIVITY_KEY = "severain_user_activity";
+const logActivity = (user: { id?: string; email?: string } | null, action: string, detail?: string) => {
+  try {
+    const id = user?.id || user?.email || "guest";
+    const all = JSON.parse(localStorage.getItem(ACTIVITY_KEY) || "{}");
+    const u = all[id] || { id, email: user?.email || "Guest", actions: [], lastSeen: 0, online: false };
+    u.email = user?.email || u.email;
+    u.lastSeen = Date.now();
+    u.online = true;
+    u.actions = [{ at: Date.now(), action, detail: detail?.slice(0, 120) || "" }, ...(u.actions || [])].slice(0, 100);
+    all[id] = u;
+    localStorage.setItem(ACTIVITY_KEY, JSON.stringify(all));
+  } catch {}
+};
+const heartbeat = (user: { id?: string; email?: string } | null) => {
+  try {
+    const id = user?.id || user?.email || "guest";
+    const all = JSON.parse(localStorage.getItem(ACTIVITY_KEY) || "{}");
+    const u = all[id] || { id, email: user?.email || "Guest", actions: [], lastSeen: 0, online: true };
+    u.email = user?.email || u.email;
+    u.lastSeen = Date.now();
+    u.online = true;
+    all[id] = u;
+    localStorage.setItem(ACTIVITY_KEY, JSON.stringify(all));
+  } catch {}
 };
 
 const Chat = () => {
