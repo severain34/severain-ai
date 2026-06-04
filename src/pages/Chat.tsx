@@ -259,6 +259,53 @@ const Chat = () => {
     recogRef.current = r; r.start(); setListening(true);
   };
 
+  // Hands-free voice conversation. Stop talking → auto-send. AI finishes speaking → listen again.
+  const startListeningOnce = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { toast.error("Voice not supported in this browser"); setCallMode(false); return; }
+    try { window.speechSynthesis?.cancel(); } catch {}
+    const r = new SR();
+    r.lang = lang === "en" ? "en-US" : lang;
+    r.continuous = false; r.interimResults = true;
+    let finalText = "";
+    r.onresult = (ev: any) => {
+      let interim = "";
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const res = ev.results[i];
+        if (res.isFinal) finalText += res[0].transcript;
+        else interim += res[0].transcript;
+      }
+      setInput(finalText + interim);
+    };
+    r.onerror = () => setListening(false);
+    r.onend = () => {
+      setListening(false);
+      const text = finalText.trim();
+      if (callModeRef.current && text) {
+        setInput(text);
+        setTimeout(() => sendMessage(), 50);
+      } else if (callModeRef.current) {
+        setTimeout(() => callModeRef.current && startListeningOnce(), 400);
+      }
+    };
+    recogRef.current = r;
+    try { r.start(); setListening(true); } catch {}
+  };
+
+  const toggleCallMode = () => {
+    if (callMode) {
+      setCallMode(false);
+      recogRef.current?.stop();
+      try { window.speechSynthesis?.cancel(); } catch {}
+      setListening(false);
+      toast.message("Call ended");
+    } else {
+      setCallMode(true);
+      toast.success("Call started — just talk, I'm listening");
+      setTimeout(() => startListeningOnce(), 100);
+    }
+  };
+
   // Extract a runnable HTML game from assistant text
   const extractGameHtml = (text: string): string | null => {
     const fence = text.match(/```(?:html|HTML)\n([\s\S]*?)```/);
