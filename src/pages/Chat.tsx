@@ -719,6 +719,63 @@ const Chat = () => {
       {mobileOpen && <div className="md:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setMobileOpen(false)} />}
 
       {/* Upgrade modal */}
+      {showSettings && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setShowSettings(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="glass rounded-2xl p-6 max-w-md w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold flex items-center gap-2"><UserIcon className="w-5 h-5 text-primary" /> Account settings</h2>
+              <button onClick={() => setShowSettings(false)}><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4 text-sm">
+              <div>
+                <label className="text-xs text-muted-foreground">Email</label>
+                <div className="mt-1 px-3 py-2 rounded-lg glass-input">{user?.email || "Not signed in"}</div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Display name</label>
+                <input value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="What should I call you?"
+                  className="w-full mt-1 px-3 py-2 rounded-lg glass-input outline-none text-foreground" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Theme</label>
+                  <select value={theme} onChange={(e) => setTheme(e.target.value as any)}
+                    className="w-full mt-1 px-3 py-2 rounded-lg glass-input outline-none text-foreground">
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Default voice</label>
+                  <select value={voiceKind} onChange={(e) => setVoiceKind(e.target.value as any)}
+                    className="w-full mt-1 px-3 py-2 rounded-lg glass-input outline-none text-foreground">
+                    <option value="kid">Kid</option>
+                    <option value="woman">Woman</option>
+                    <option value="man">Man</option>
+                  </select>
+                </div>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={autoSpeak}
+                  onChange={(e) => { setAutoSpeak(e.target.checked); localStorage.setItem("severain_auto_speak", e.target.checked ? "1" : "0"); }} />
+                Auto-speak every assistant reply
+              </label>
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => { localStorage.setItem("severain_display_name", displayName); toast.success("Saved"); setShowSettings(false); }}
+                  className="flex-1 py-2 rounded-lg gradient-primary text-primary-foreground font-medium">Save</button>
+                {user && (
+                  <button onClick={logout} className="px-4 py-2 rounded-lg bg-destructive/20 text-destructive font-medium">
+                    Sign out
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showUpgrade && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setShowUpgrade(false)}>
           <div onClick={(e) => e.stopPropagation()}
