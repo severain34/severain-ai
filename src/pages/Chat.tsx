@@ -507,17 +507,23 @@ const Chat = () => {
         </div>
 
         <div className="p-3 border-t border-border space-y-2">
-          <button onClick={() => navigate("/admin")}
+          {isAdmin && (
+            <button onClick={() => navigate("/admin")}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg glass-input hover:bg-secondary text-sm">
+              <Shield className="w-4 h-4 text-primary" />
+              Admin panel
+            </button>
+          )}
+          <button onClick={() => setShowSettings(true)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg glass-input hover:bg-secondary text-sm">
-            <Shield className="w-4 h-4 text-primary" />
-            {isAdmin ? "Admin panel" : "Sign in as Admin"}
+            <Settings className="w-4 h-4" /> Account settings
           </button>
           <button onClick={() => setShowUpgrade(true)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg gradient-primary text-primary-foreground text-sm font-medium">
             <Crown className="w-4 h-4" /> {tr(lang, "upgrade")}
           </button>
           <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
-            <span className="truncate flex-1">{user?.email || "Guest"}</span>
+            <span className="truncate flex-1">{displayName || user?.email || "Guest"}</span>
             {user ? (
               <button onClick={logout} title={tr(lang, "logout")} className="hover:text-foreground">
                 <LogOut className="w-4 h-4" />
@@ -530,6 +536,7 @@ const Chat = () => {
           </div>
         </div>
       </aside>
+
 
       {/* Main */}
       <main className="flex-1 flex flex-col min-w-0 relative z-10">
