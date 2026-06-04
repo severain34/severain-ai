@@ -929,7 +929,7 @@ const Bubble = ({
   const video = extractVideo?.(content) || null;
   return (
     <div className="group animate-in fade-in duration-300 relative">
-      <div className="chat-prose prose prose-invert max-w-none prose-pre:bg-secondary prose-pre:border prose-pre:border-border prose-code:text-foreground prose-headings:text-foreground prose-p:text-foreground/90">
+      <div className="chat-prose prose max-w-none prose-pre:bg-secondary prose-pre:border prose-pre:border-border prose-pre:text-foreground prose-code:text-foreground prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-li:text-foreground prose-blockquote:text-foreground prose-a:text-primary prose-em:text-foreground">
         <ReactMarkdown components={{ pre: PreWithCopy }}>{content}</ReactMarkdown>
         {(game || video) && (
           <div className="not-prose flex gap-2 mt-3">
