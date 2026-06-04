@@ -135,6 +135,10 @@ const Chat = () => {
   const [callMode, setCallMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [displayName, setDisplayName] = useState(() => localStorage.getItem("severain_display_name") || "");
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const callModeRef = useRef(false);
   useEffect(() => { callModeRef.current = callMode; }, [callMode]);
   const recogRef = useRef<any>(null);
