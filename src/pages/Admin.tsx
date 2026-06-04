@@ -12,6 +12,7 @@ const ADMIN_MODEL_KEY = "severain_model";
 const ADMIN_BANNER_KEY = "severain_admin_banner";
 const ADMIN_AUTOSPEAK_KEY = "severain_auto_speak";
 const THREADS_KEY = "severain_threads_v2";
+const ACTIVITY_KEY = "severain_user_activity";
 const DEFAULT_PIN = "severain2026";
 
 const MODELS = [
