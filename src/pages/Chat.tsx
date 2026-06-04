@@ -132,10 +132,11 @@ const Chat = () => {
   const [autoSpeak, setAutoSpeak] = useState(() => localStorage.getItem("severain_auto_speak") === "1");
   const [banner, setBanner] = useState(() => localStorage.getItem("severain_admin_banner") || "");
   const isAdmin = typeof window !== "undefined" && localStorage.getItem("severain_admin_unlocked") === "1";
-
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [callMode, setCallMode] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [displayName, setDisplayName] = useState(() => localStorage.getItem("severain_display_name") || "");
+  const callModeRef = useRef(false);
+  useEffect(() => { callModeRef.current = callMode; }, [callMode]);
   const recogRef = useRef<any>(null);
   const pendingPreview = useRef<"game" | "video" | null>(null);
   const stickToBottomRef = useRef(true);
