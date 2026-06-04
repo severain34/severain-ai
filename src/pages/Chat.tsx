@@ -160,6 +160,22 @@ const Chat = () => {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Presence heartbeat for admin "Users online"
+  useEffect(() => {
+    heartbeat(user);
+    logActivity(user, "opened_chat");
+    const i = setInterval(() => heartbeat(user), 15000);
+    const offline = () => {
+      try {
+        const id = user?.id || user?.email || "guest";
+        const all = JSON.parse(localStorage.getItem(ACTIVITY_KEY) || "{}");
+        if (all[id]) { all[id].online = false; localStorage.setItem(ACTIVITY_KEY, JSON.stringify(all)); }
+      } catch {}
+    };
+    window.addEventListener("beforeunload", offline);
+    return () => { clearInterval(i); window.removeEventListener("beforeunload", offline); offline(); };
+  }, [user]);
+
   useEffect(() => {
     if (threads.length === 0) {
       const t: Thread = { id: crypto.randomUUID(), title: "New chat", messages: [], updatedAt: Date.now(), mode };
