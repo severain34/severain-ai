@@ -82,7 +82,7 @@ const Admin = () => {
   const fetchAccounts = async () => {
     setLoadingAccounts(true);
     try {
-      const url = `${(supabase as any).supabaseUrl || "https://iijxdopbacltbzrafbka.supabase.co"}/functions/v1/admin-users`;
+      const url = `${import.meta.env.VITE_SUPABASE_URL || "https://iijxdopbacltbzrafbka.supabase.co"}/functions/v1/admin-users`;
       const resp = await fetch(url, { headers: { "x-admin-pin": DEFAULT_PIN } });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "Failed");
