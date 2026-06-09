@@ -381,48 +381,47 @@ export default function Auth() {
           <div>
             <h4 className="font-semibold mb-3 text-foreground">Product</h4>
             <ul className="space-y-2 text-muted-foreground">
-              <li><a href="#" className="hover:text-foreground">Features</a></li>
-              <li><a href="#" className="hover:text-foreground">Pricing</a></li>
-              <li><a href="#" className="hover:text-foreground">Image generation</a></li>
-              <li><a href="#" className="hover:text-foreground">Prompt library</a></li>
-              <li><a href="#" className="hover:text-foreground">VS Code editor</a></li>
-              <li><a href="#" className="hover:text-foreground">Changelog</a></li>
+              <li><a href="/info/features" className="hover:text-foreground">Features</a></li>
+              <li><a href="/info/pricing" className="hover:text-foreground">Pricing</a></li>
+              <li><a href="/info/image-generation" className="hover:text-foreground">Image generation</a></li>
+              <li><a href="/info/prompt-library" className="hover:text-foreground">Prompt library</a></li>
+              <li><a href="/info/editor" className="hover:text-foreground">VS Code editor</a></li>
+              <li><a href="/info/changelog" className="hover:text-foreground">Changelog</a></li>
             </ul>
           </div>
 
           <div>
             <h4 className="font-semibold mb-3 text-foreground">Resources</h4>
             <ul className="space-y-2 text-muted-foreground">
-              <li><a href="#" className="hover:text-foreground">Documentation</a></li>
-              <li><a href="#" className="hover:text-foreground">Tutorials</a></li>
-              <li><a href="#" className="hover:text-foreground">Blog</a></li>
-              <li><a href="#" className="hover:text-foreground">Community</a></li>
-              <li><a href="#" className="hover:text-foreground">Help center</a></li>
-              <li><a href="#" className="hover:text-foreground">Status</a></li>
+              <li><a href="/info/docs" className="hover:text-foreground">Documentation</a></li>
+              <li><a href="/info/tutorials" className="hover:text-foreground">Tutorials</a></li>
+              <li><a href="/info/blog" className="hover:text-foreground">Blog</a></li>
+              <li><a href="/info/community" className="hover:text-foreground">Community</a></li>
+              <li><a href="/info/help" className="hover:text-foreground">Help center</a></li>
+              <li><a href="/info/status" className="hover:text-foreground">Status</a></li>
             </ul>
           </div>
 
           <div>
             <h4 className="font-semibold mb-3 text-foreground">Company</h4>
             <ul className="space-y-2 text-muted-foreground">
-              <li><a href="#" className="hover:text-foreground">About</a></li>
-              <li><a href="#" className="hover:text-foreground">Careers</a></li>
-              <li><a href="#" className="hover:text-foreground">Contact</a></li>
-              <li><a href="#" className="hover:text-foreground">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-foreground">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-foreground">Cookies</a></li>
+              <li><a href="/info/about" className="hover:text-foreground">About</a></li>
+              <li><a href="/info/careers" className="hover:text-foreground">Careers</a></li>
+              <li><a href="/info/contact" className="hover:text-foreground">Contact</a></li>
+              <li><a href="/info/privacy" className="hover:text-foreground">Privacy Policy</a></li>
+              <li><a href="/info/terms" className="hover:text-foreground">Terms of Service</a></li>
+              <li><a href="/info/cookies" className="hover:text-foreground">Cookies</a></li>
             </ul>
           </div>
         </div>
         <div className="border-t border-border">
-          <div className="max-w-6xl mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
-            <span>Made with ❤️ by Senganeza Severain · MTN: 0792 315 839</span>
+          <div className="max-w-6xl mx-auto px-6 py-4 flex flex-wrap items-center justify-end gap-3 text-xs text-muted-foreground">
             <div className="flex gap-4">
-              <a href="#" className="hover:text-foreground">Twitter / X</a>
-              <a href="#" className="hover:text-foreground">YouTube</a>
-              <a href="#" className="hover:text-foreground">GitHub</a>
-              <a href="#" className="hover:text-foreground">LinkedIn</a>
-              <a href="#" className="hover:text-foreground">TikTok</a>
+              <a href="https://twitter.com" target="_blank" rel="noreferrer" className="hover:text-foreground">Twitter / X</a>
+              <a href="https://youtube.com" target="_blank" rel="noreferrer" className="hover:text-foreground">YouTube</a>
+              <a href="https://github.com" target="_blank" rel="noreferrer" className="hover:text-foreground">GitHub</a>
+              <a href="https://linkedin.com" target="_blank" rel="noreferrer" className="hover:text-foreground">LinkedIn</a>
+              <a href="https://tiktok.com" target="_blank" rel="noreferrer" className="hover:text-foreground">TikTok</a>
             </div>
           </div>
         </div>
