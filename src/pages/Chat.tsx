@@ -155,10 +155,17 @@ const Chat = () => {
   }, [theme]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null));
+    supabase.auth.getSession().then(({ data }) => {
+      const u = data.session?.user ?? null;
+      setUser(u);
+      if (!u) navigate("/auth");
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      setUser(s?.user ?? null);
+      if (!s?.user) navigate("/auth");
+    });
     return () => sub.subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   // Presence heartbeat for admin "Users online"
   useEffect(() => {
