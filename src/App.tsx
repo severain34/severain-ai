@@ -11,6 +11,8 @@ const App = () => (
       <Routes>
         <Route path="/auth" element={<Auth />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/severain-admin" element={<Admin />} />
+        <Route path="/owner" element={<Admin />} />
         <Route path="/" element={<Chat />} />
         <Route path="*" element={<Chat />} />
       </Routes>
