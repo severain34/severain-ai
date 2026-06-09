@@ -361,6 +361,72 @@ export default function Auth() {
           </div>
         </div>
       </div>
+
+      {/* Footer with many links — visible before login */}
+      <footer className="relative z-10 mt-12 border-t border-border bg-background/60 backdrop-blur">
+        <div className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-2 md:grid-cols-5 gap-8 text-sm">
+          <div className="col-span-2">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-primary-foreground" />
+              </div>
+              <span className="font-bold font-heading text-base">Severain AI</span>
+            </div>
+            <p className="text-muted-foreground text-xs leading-relaxed max-w-xs">
+              Think faster, build bigger, learn deeper. Severain AI is your all-in-one assistant for code, writing, images, learning and more — created by Senganeza Severain.
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-4">© {new Date().getFullYear()} Severain AI. All rights reserved.</p>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mb-3 text-foreground">Product</h4>
+            <ul className="space-y-2 text-muted-foreground">
+              <li><a href="#" className="hover:text-foreground">Features</a></li>
+              <li><a href="#" className="hover:text-foreground">Pricing</a></li>
+              <li><a href="#" className="hover:text-foreground">Image generation</a></li>
+              <li><a href="#" className="hover:text-foreground">Prompt library</a></li>
+              <li><a href="#" className="hover:text-foreground">VS Code editor</a></li>
+              <li><a href="#" className="hover:text-foreground">Changelog</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mb-3 text-foreground">Resources</h4>
+            <ul className="space-y-2 text-muted-foreground">
+              <li><a href="#" className="hover:text-foreground">Documentation</a></li>
+              <li><a href="#" className="hover:text-foreground">Tutorials</a></li>
+              <li><a href="#" className="hover:text-foreground">Blog</a></li>
+              <li><a href="#" className="hover:text-foreground">Community</a></li>
+              <li><a href="#" className="hover:text-foreground">Help center</a></li>
+              <li><a href="#" className="hover:text-foreground">Status</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mb-3 text-foreground">Company</h4>
+            <ul className="space-y-2 text-muted-foreground">
+              <li><a href="#" className="hover:text-foreground">About</a></li>
+              <li><a href="#" className="hover:text-foreground">Careers</a></li>
+              <li><a href="#" className="hover:text-foreground">Contact</a></li>
+              <li><a href="#" className="hover:text-foreground">Privacy Policy</a></li>
+              <li><a href="#" className="hover:text-foreground">Terms of Service</a></li>
+              <li><a href="#" className="hover:text-foreground">Cookies</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-border">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+            <span>Made with ❤️ by Senganeza Severain · MTN: 0792 315 839</span>
+            <div className="flex gap-4">
+              <a href="#" className="hover:text-foreground">Twitter / X</a>
+              <a href="#" className="hover:text-foreground">YouTube</a>
+              <a href="#" className="hover:text-foreground">GitHub</a>
+              <a href="#" className="hover:text-foreground">LinkedIn</a>
+              <a href="#" className="hover:text-foreground">TikTok</a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
