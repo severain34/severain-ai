@@ -583,33 +583,36 @@ const Chat = () => {
 
             <button
               onClick={openLocalEditor}
-              title="Open your installed VS Code / editor"
+              title="Open your installed VS Code editor"
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass-input text-sm hover:bg-secondary"
             >
               <Code className="w-4 h-4 text-primary" />
               <span>Open editor</span>
             </button>
 
-            {/* Voice persona picker */}
-            <div className="relative">
-              <Volume2 className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-              <select
-                value={voiceKind}
-                onChange={(e) => setVoiceKind(e.target.value as any)}
-                title="Voice for read-aloud"
-                className="pl-8 pr-3 py-1.5 rounded-lg glass-input text-sm outline-none"
-              >
-                <option value="kid">Kid voice</option>
-                <option value="woman">Woman voice</option>
-                <option value="man">Man voice</option>
-              </select>
-            </div>
+            <button
+              onClick={() => quickAction("prompt")}
+              title="Help me write a prompt"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass-input text-sm hover:bg-secondary"
+            >
+              <Wand2 className="w-4 h-4 text-fuchsia-400" />
+              <span>Prompt helper</span>
+            </button>
+
+            <button
+              onClick={() => { setInput("Generate a high-quality image of: "); setTimeout(() => inputRef.current?.focus(), 30); }}
+              title="Create an image"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass-input text-sm hover:bg-secondary"
+            >
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <span>Create image</span>
+            </button>
 
             <div className="relative">
               <Globe className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               <select value={lang} onChange={(e) => setLang(e.target.value)}
-                className="pl-8 pr-3 py-1.5 rounded-lg glass-input text-sm outline-none">
-                {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+                className="pl-8 pr-3 py-1.5 rounded-lg glass-input text-sm outline-none bg-background text-foreground">
+                {LANGUAGES.map((l) => <option key={l.code} value={l.code} className="bg-background text-foreground">{l.name}</option>)}
               </select>
             </div>
 
