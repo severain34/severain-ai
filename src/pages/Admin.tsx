@@ -76,6 +76,25 @@ const Admin = () => {
     toast.success("User removed from logs");
   };
 
+  // All registered accounts (from Supabase Auth via edge function)
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const fetchAccounts = async () => {
+    setLoadingAccounts(true);
+    try {
+      const url = `${(supabase as any).supabaseUrl || "https://iijxdopbacltbzrafbka.supabase.co"}/functions/v1/admin-users`;
+      const resp = await fetch(url, { headers: { "x-admin-pin": DEFAULT_PIN } });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Failed");
+      setAccounts(data.users || []);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load accounts");
+    } finally { setLoadingAccounts(false); }
+  };
+  useEffect(() => { if (unlocked) fetchAccounts(); }, [unlocked]);
+
+
+
 
   useEffect(() => { if (unlocked) localStorage.setItem(ADMIN_PIN_KEY, "1"); }, [unlocked]);
 
