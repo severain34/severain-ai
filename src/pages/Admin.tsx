@@ -6,7 +6,7 @@ import {
   UserCog, RefreshCcw, Mail, Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+
 
 const ADMIN_PIN_KEY = "severain_admin_unlocked";
 const ADMIN_TRAIN_KEY = "severain_admin_system";
