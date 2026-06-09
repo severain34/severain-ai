@@ -334,6 +334,64 @@ const Admin = () => {
           )}
         </section>
 
+        {/* All registered accounts (live from Auth) */}
+        <section className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <UserCog className="w-4 h-4 text-primary" />
+            <h2 className="font-semibold">All registered accounts</h2>
+            <span className="ml-2 text-xs text-muted-foreground">{accounts.length} accounts</span>
+            <button onClick={fetchAccounts} disabled={loadingAccounts}
+              className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+              <RefreshCcw className={`w-3 h-3 ${loadingAccounts ? "animate-spin" : ""}`} /> Refresh
+            </button>
+          </div>
+          {accounts.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {loadingAccounts ? "Loading accounts..." : "No accounts loaded yet."}
+            </p>
+          ) : (
+            <div className="overflow-x-auto -mx-2">
+              <table className="w-full text-xs">
+                <thead className="text-muted-foreground border-b border-border">
+                  <tr>
+                    <th className="text-left px-2 py-2">Email</th>
+                    <th className="text-left px-2 py-2">Name</th>
+                    <th className="text-left px-2 py-2">Provider</th>
+                    <th className="text-left px-2 py-2">Status</th>
+                    <th className="text-left px-2 py-2">Joined</th>
+                    <th className="text-left px-2 py-2">Last sign-in</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accounts.map((a) => (
+                    <tr key={a.id} className="border-b border-border/40 hover:bg-secondary/40">
+                      <td className="px-2 py-2 font-medium text-foreground flex items-center gap-1.5">
+                        <Mail className="w-3 h-3 text-muted-foreground" />
+                        {a.email || "—"}
+                      </td>
+                      <td className="px-2 py-2 text-muted-foreground">{a.name || "—"}</td>
+                      <td className="px-2 py-2 text-muted-foreground">{a.provider}</td>
+                      <td className="px-2 py-2">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] ${a.confirmed ? "bg-green-500/15 text-green-400" : "bg-yellow-500/15 text-yellow-400"}`}>
+                          {a.confirmed ? "Verified" : "Pending"}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-muted-foreground flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {a.created_at ? new Date(a.created_at).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="px-2 py-2 text-muted-foreground">
+                        {a.last_sign_in_at ? new Date(a.last_sign_in_at).toLocaleString() : "Never"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+
         {/* Data management */}
         <section className="glass rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-3">
