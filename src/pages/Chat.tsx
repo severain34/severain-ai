@@ -763,6 +763,21 @@ const Chat = () => {
                   onChange={(e) => { setAutoSpeak(e.target.checked); localStorage.setItem("severain_auto_speak", e.target.checked ? "1" : "0"); }} />
                 Auto-speak every assistant reply
               </label>
+
+              {isAdmin && (
+                <div className="rounded-xl p-3 border border-primary/30 bg-primary/5 text-xs space-y-1">
+                  <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <Shield className="w-3.5 h-3.5 text-primary" /> Owner / Admin access
+                  </div>
+                  <p className="text-muted-foreground">Use these URLs to train your model and manage everything:</p>
+                  <ul className="text-foreground space-y-0.5">
+                    <li>• <code className="text-primary">/admin</code></li>
+                    <li>• <code className="text-primary">/severain-admin</code></li>
+                    <li>• <code className="text-primary">/owner</code></li>
+                  </ul>
+                  <p className="text-muted-foreground pt-1">Login PIN: <code className="text-foreground font-bold">severain2026</code></p>
+                </div>
+              )}
               <div className="flex gap-2 pt-2">
                 <button
                   onClick={() => { localStorage.setItem("severain_display_name", displayName); toast.success("Saved"); setShowSettings(false); }}
