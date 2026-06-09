@@ -779,38 +779,45 @@ const Chat = () => {
       )}
 
       {showUpgrade && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setShowUpgrade(false)}>
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowUpgrade(false)}>
           <div onClick={(e) => e.stopPropagation()}
-            className="glass rounded-2xl p-6 max-w-md w-full">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Crown className="w-5 h-5 text-yellow-500" /> {tr(lang, "upgrade")} Severain AI Pro
+            className="glass rounded-2xl p-6 max-w-3xl w-full my-8">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <Crown className="w-6 h-6 text-yellow-500" /> Upgrade your plan
               </h2>
               <button onClick={() => setShowUpgrade(false)}><X className="w-5 h-5" /></button>
             </div>
-            <ul className="space-y-2 text-sm mb-5">
-              <li>✨ Unlimited messages & long context</li>
-              <li>🎮 Build full video games & apps end-to-end</li>
-              <li>📁 Larger file uploads & advanced analysis</li>
-              <li>🎙 Premium voice & 10+ languages</li>
-              <li>🚀 Priority faster responses</li>
-            </ul>
-            <div className="bg-secondary rounded-xl p-4 mb-4">
-              <p className="text-xs text-muted-foreground mb-1">Pay via MTN Mobile Money / Airtel</p>
-              <p className="text-lg font-bold">📱 0792 315 839</p>
-              <p className="text-xs text-muted-foreground mt-2">
-                Send payment, then message the same number with your account email. Pro activates within 24h.
-              </p>
+            <p className="text-sm text-muted-foreground mb-5">Get more access to Severain AI's smartest models, image generation and more.</p>
+            <div className="grid md:grid-cols-3 gap-3">
+              {[
+                { name: "Free", price: "0 RWF", tag: "Current plan", features: ["Standard model", "Limited daily messages", "Basic file analysis", "Standard speed"], cta: "Your plan", disabled: true },
+                { name: "Plus", price: "5,000 RWF", sub: "/ month", tag: "Most popular", popular: true, features: ["Smarter advanced models", "Unlimited messages", "Image creation", "Faster responses", "Long context", "Voice read-aloud"], cta: "Upgrade to Plus" },
+                { name: "Pro", price: "45,000 RWF", sub: "/ year", tag: "Best value", features: ["Everything in Plus", "Highest priority", "Build full apps & games", "Largest file uploads", "Early access to new tools", "Dedicated support"], cta: "Upgrade to Pro" },
+              ].map((p) => (
+                <div key={p.name} className={`rounded-xl p-4 border ${p.popular ? "border-primary bg-primary/5" : "border-border"} flex flex-col`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-bold text-lg">{p.name}</h3>
+                    {p.tag && <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.popular ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{p.tag}</span>}
+                  </div>
+                  <div className="mb-3">
+                    <span className="text-2xl font-bold">{p.price}</span>
+                    {p.sub && <span className="text-xs text-muted-foreground">{p.sub}</span>}
+                  </div>
+                  <ul className="space-y-1.5 text-xs flex-1 mb-3">
+                    {p.features.map((f) => (
+                      <li key={f} className="flex items-start gap-1.5"><Check className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" /><span>{f}</span></li>
+                    ))}
+                  </ul>
+                  <button disabled={p.disabled}
+                    className={`w-full py-2 rounded-lg text-sm font-medium ${p.disabled ? "bg-secondary text-muted-foreground cursor-default" : p.popular ? "gradient-primary text-primary-foreground hover:opacity-90" : "glass-input hover:bg-secondary"}`}>
+                    {p.cta}
+                  </button>
+                </div>
+              ))}
             </div>
-            <div className="grid grid-cols-2 gap-3 text-center">
-              <div className="border border-border rounded-lg p-3">
-                <p className="text-xs text-muted-foreground">Monthly</p>
-                <p className="text-xl font-bold">5,000 RWF</p>
-              </div>
-              <div className="border border-primary rounded-lg p-3 bg-primary/5">
-                <p className="text-xs text-primary">Yearly · Best</p>
-                <p className="text-xl font-bold">45,000 RWF</p>
-              </div>
+            <div className="bg-secondary rounded-xl p-3 mt-5 text-xs text-muted-foreground">
+              <p>Pay via MTN MoMo / Airtel: <strong className="text-foreground">📱 0792 315 839</strong> — then send your account email to the same number. Activation within 24h.</p>
             </div>
           </div>
         </div>
