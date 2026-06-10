@@ -135,6 +135,8 @@ const Chat = () => {
   const [callMode, setCallMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [displayName, setDisplayName] = useState(() => localStorage.getItem("severain_display_name") || "");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const avatarFileRef = useRef<HTMLInputElement>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -158,14 +160,31 @@ const Chat = () => {
     supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user ?? null;
       setUser(u);
-      if (!u) navigate("/auth");
+      if (!u && localStorage.getItem("severain_guest") !== "1") navigate("/auth");
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setUser(s?.user ?? null);
-      if (!s?.user) navigate("/auth");
+      if (!s?.user && localStorage.getItem("severain_guest") !== "1") navigate("/auth");
     });
     return () => sub.subscription.unsubscribe();
   }, [navigate]);
+
+  // Load profile (display name + photo) so Severain AI can access the account
+  useEffect(() => {
+    if (!user) { setAvatarUrl(null); return; }
+    (async () => {
+      try {
+        const { data } = await supabase.from("profiles")
+          .select("display_name, avatar_path").eq("id", user.id).maybeSingle();
+        if (data?.display_name) setDisplayName(data.display_name);
+        if (data?.avatar_path) {
+          const { data: signed } = await supabase.storage.from("avatars")
+            .createSignedUrl(data.avatar_path, 60 * 60 * 24 * 7);
+          if (signed?.signedUrl) setAvatarUrl(signed.signedUrl);
+        }
+      } catch {}
+    })();
+  }, [user]);
 
   // Presence heartbeat for admin "Users online"
   useEffect(() => {
@@ -364,6 +383,12 @@ const Chat = () => {
       const url = `https://iijxdopbacltbzrafbka.supabase.co/functions/v1/chat`;
       const adminSystem = localStorage.getItem("severain_admin_system") || "";
       const model = localStorage.getItem("severain_model") || "";
+      const userContext = user ? {
+        name: displayName || user.user_metadata?.full_name || "",
+        email: user.email,
+        createdAt: user.created_at,
+        hasAvatar: !!avatarUrl,
+      } : null;
       const resp = await fetch(url, {
         method: "POST",
         signal: ac.signal,
@@ -371,7 +396,7 @@ const Chat = () => {
           "Content-Type": "application/json",
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ messages: updated, mode, language: lang, attachment: sentAttachment, adminSystem, model }),
+        body: JSON.stringify({ messages: updated, mode, language: lang, attachment: sentAttachment, adminSystem, model, userContext }),
       });
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({ error: "Request failed" }));
@@ -440,7 +465,40 @@ const Chat = () => {
     if (typeof window !== "undefined") window.speechSynthesis?.cancel();
   };
 
-  const logout = async () => { await supabase.auth.signOut(); navigate("/auth"); };
+  const logout = async () => { await supabase.auth.signOut(); localStorage.removeItem("severain_guest"); navigate("/auth"); };
+
+  // Upload profile photo to the user's account
+  const uploadAvatar = async (file: File) => {
+    if (!user) { toast.error("Sign in first to add a profile photo."); return; }
+    if (file.size > 3 * 1024 * 1024) { toast.error("Image too large (max 3 MB)."); return; }
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `${user.id}/avatar.${ext}`;
+    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    if (error) { toast.error(error.message); return; }
+    await supabase.from("profiles").upsert({
+      id: user.id,
+      display_name: displayName || user.user_metadata?.full_name || null,
+      avatar_path: path,
+      updated_at: new Date().toISOString(),
+    });
+    const { data: signed } = await supabase.storage.from("avatars").createSignedUrl(path, 60 * 60 * 24 * 7);
+    if (signed?.signedUrl) setAvatarUrl(signed.signedUrl);
+    toast.success("Profile photo updated!");
+    logActivity(user, "uploaded_profile_photo");
+  };
+
+  const saveSettings = async () => {
+    localStorage.setItem("severain_display_name", displayName);
+    if (user) {
+      await supabase.from("profiles").upsert({
+        id: user.id,
+        display_name: displayName || null,
+        updated_at: new Date().toISOString(),
+      });
+    }
+    toast.success("Saved");
+    setShowSettings(false);
+  };
 
   const messages = active?.messages || [];
   const filteredThreads = useMemo(() =>
@@ -729,9 +787,30 @@ const Chat = () => {
               <button onClick={() => setShowSettings(false)}><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-4 text-sm">
+              {/* Profile photo */}
+              <div className="flex items-center gap-4">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Profile photo" className="w-16 h-16 rounded-full object-cover border border-border" />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center">
+                    <UserIcon className="w-7 h-7 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <button onClick={() => avatarFileRef.current?.click()}
+                    className="px-3 py-1.5 rounded-lg glass-input text-xs text-foreground hover:bg-secondary transition">
+                    {avatarUrl ? "Change photo" : "Upload photo"}
+                  </button>
+                  <p className="text-[10px] text-muted-foreground">
+                    {user ? "JPG/PNG, max 3 MB — saved to your account." : "Sign in to save a profile photo."}
+                  </p>
+                </div>
+                <input ref={avatarFileRef} type="file" accept="image/*" className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadAvatar(f); e.target.value = ""; }} />
+              </div>
               <div>
                 <label className="text-xs text-muted-foreground">Email</label>
-                <div className="mt-1 px-3 py-2 rounded-lg glass-input">{user?.email || "Not signed in"}</div>
+                <div className="mt-1 px-3 py-2 rounded-lg glass-input">{user?.email || "Not signed in (guest)"}</div>
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">Display name</label>
@@ -739,6 +818,11 @@ const Chat = () => {
                   placeholder="What should I call you?"
                   className="w-full mt-1 px-3 py-2 rounded-lg glass-input outline-none text-foreground" />
               </div>
+              {user && (
+                <p className="text-[11px] text-muted-foreground rounded-lg bg-primary/5 border border-primary/20 px-3 py-2">
+                  ✓ Severain AI can access your account data (name, email, member date, profile photo) to personalize answers. Ask it: "What do you know about my account?"
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-muted-foreground">Theme</label>
@@ -780,7 +864,7 @@ const Chat = () => {
               )}
               <div className="flex gap-2 pt-2">
                 <button
-                  onClick={() => { localStorage.setItem("severain_display_name", displayName); toast.success("Saved"); setShowSettings(false); }}
+                  onClick={saveSettings}
                   className="flex-1 py-2 rounded-lg gradient-primary text-primary-foreground font-medium">Save</button>
                 {user && (
                   <button onClick={logout} className="px-4 py-2 rounded-lg bg-destructive/20 text-destructive font-medium">
