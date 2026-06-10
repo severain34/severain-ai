@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, mode, language, attachment, adminSystem, model } = await req.json();
+    const { messages, mode, language, attachment, adminSystem, model, userContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -44,7 +44,16 @@ Deno.serve(async (req) => {
     const adminPrompt = typeof adminSystem === "string" && adminSystem.trim()
       ? `ADMIN TRAINING (highest priority, set by Senganeza Severain):\n${adminSystem.trim()}`
       : "";
-    const system = [BASE, modePrompt, langPrompt, adminPrompt].filter(Boolean).join("\n\n");
+    const uc = userContext && typeof userContext === "object" ? userContext : null;
+    const userPrompt = uc && (uc.email || uc.name)
+      ? `SIGNED-IN USER ACCOUNT (the user granted you access to their account details — use them to personalize):
+- Name: ${String(uc.name || "not set").slice(0, 100)}
+- Email: ${String(uc.email || "unknown").slice(0, 100)}
+- Member since: ${String(uc.createdAt || "unknown").slice(0, 40)}
+- Profile photo: ${uc.hasAvatar ? "uploaded" : "not uploaded yet"}
+Greet and address the user by name when natural. If asked what account data you can access, list exactly the items above and nothing more. Help them update their display name or profile photo via Account settings when asked.`
+      : "";
+    const system = [BASE, modePrompt, langPrompt, adminPrompt, userPrompt].filter(Boolean).join("\n\n");
 
     const finalMessages = [...messages];
     if (attachment?.content) {

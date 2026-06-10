@@ -85,13 +85,19 @@ export default function Auth() {
     setError(""); setLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email, password,
           options: { emailRedirectTo: `${window.location.origin}/`, data: { full_name: name } },
         });
         if (error) throw error;
-        toast.success(tr(lang, "verify_sent"));
-        setStep("verify");
+        if (data.session) {
+          localStorage.removeItem("severain_guest");
+          toast.success("Account created — welcome to Severain AI!");
+          navigate("/");
+        } else {
+          toast.success(tr(lang, "verify_sent"));
+          setStep("verify");
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -161,10 +167,22 @@ export default function Auth() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => { localStorage.setItem("severain_guest", "1"); navigate("/"); }}
             className="px-3 py-1.5 rounded-lg glass text-sm hover:bg-secondary/60 transition flex items-center gap-1.5"
           >
             <Zap className="w-3.5 h-3.5 text-accent" /> Try without login
+          </button>
+          <button
+            onClick={() => { setMode("signin"); setStep("form"); setError(""); document.getElementById("auth-card")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}
+            className="px-3 py-1.5 rounded-lg glass text-sm hover:bg-secondary/60 transition"
+          >
+            Log in
+          </button>
+          <button
+            onClick={() => { setMode("signup"); setStep("form"); setError(""); document.getElementById("auth-card")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}
+            className="px-3 py-1.5 rounded-lg gradient-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition"
+          >
+            Sign up
           </button>
         </div>
       </nav>
@@ -275,7 +293,7 @@ export default function Auth() {
         </div>
 
         {/* Right: auth card */}
-        <div className="lg:col-span-2 lg:sticky lg:top-4">
+        <div id="auth-card" className="lg:col-span-2 lg:sticky lg:top-4">
           <div className="glass rounded-3xl p-6 md:p-7">
             {/* Language picker with search */}
             <div className="mb-5">
