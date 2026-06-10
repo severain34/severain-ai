@@ -105,6 +105,19 @@
     backdrop-filter: blur(12px);
     border: 1px solid hsl(var(--foreground) / 0.10);
   }
+  .light .glass {
+    background: hsl(0 0% 100% / 0.78);
+    border: 1px solid hsl(var(--foreground) / 0.12);
+    box-shadow: 0 8px 32px hsl(0 0% 0% / 0.08), inset 0 1px 0 hsl(0 0% 100% / 0.7);
+  }
+  .light .glass-input {
+    background: hsl(0 0% 100% / 0.85);
+    border: 1px solid hsl(var(--foreground) / 0.16);
+    color: hsl(var(--foreground));
+  }
+  .light .glass-input::placeholder {
+    color: hsl(var(--muted-foreground));
+  }
   .blob {
     position: absolute;
     border-radius: 9999px;
