@@ -9,6 +9,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LANGUAGES, tr } from "@/lib/i18n";
+import heroFig from "@/assets/severain-hero.jpg";
 
 const QUOTES = [
   "“Any sufficiently advanced technology is indistinguishable from magic.” — Arthur C. Clarke",
@@ -37,6 +38,13 @@ const DEVICES = [
   { icon: Tv, name: "Smart TV / Web" },
 ];
 
+const STATS = [
+  { value: "120K+", label: "Prompts answered" },
+  { value: "10+", label: "Languages spoken" },
+  { value: "50+", label: "Expert skills" },
+  { value: "99.9%", label: "Uptime" },
+];
+
 type Step = "form" | "verify";
 
 export default function Auth() {
@@ -52,14 +60,24 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [quoteIdx, setQuoteIdx] = useState(0);
+  const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
     const id = setInterval(() => setQuoteIdx((i) => (i + 1) % QUOTES.length), 5000);
     return () => clearInterval(id);
   }, []);
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => setCooldown((c) => c - 1), 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
   useEffect(() => { localStorage.setItem("severain_lang", lang); }, [lang]);
   useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) navigate("/");
+    });
     supabase.auth.getSession().then(({ data }) => { if (data.session) navigate("/"); });
+    return () => sub.subscription.unsubscribe();
   }, [navigate]);
 
   const submit = async (e: React.FormEvent) => {
@@ -96,13 +114,29 @@ export default function Auth() {
   };
 
   const resend = async () => {
+    if (cooldown > 0) return;
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resend({ type: "signup", email });
+      const { error } = await supabase.auth.resend({
+        type: "signup", email,
+        options: { emailRedirectTo: `${window.location.origin}/` },
+      });
       if (error) throw error;
-      toast.success("Code resent.");
+      toast.success("Email resent — also check Spam / Junk.");
+      setCooldown(60);
     } catch (err) { toast.error((err as Error).message); }
     finally { setLoading(false); }
+  };
+
+  const checkConfirmed = async () => {
+    setLoading(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) { toast.success("Email verified!"); navigate("/"); return; }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (!error) { toast.success("Email verified!"); navigate("/"); }
+      else toast.error("Not confirmed yet — open the email and click the confirmation link first.");
+    } finally { setLoading(false); }
   };
 
   const filteredLangs = LANGUAGES.filter((l) =>
@@ -140,7 +174,7 @@ export default function Auth() {
         <div className="lg:col-span-3 space-y-8 pt-4">
           <div>
             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full glass text-xs text-accent mb-4">
-              <Shield className="w-3 h-3" /> Powered by Lovable AI · Gemini & GPT-5
+              <Shield className="w-3 h-3" /> Severain AI — trained by Senganeza Severain
             </span>
             <h1 className="text-4xl md:text-6xl font-bold font-heading leading-tight mb-3">
               The AI that <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">does anything</span>.
@@ -154,6 +188,22 @@ export default function Auth() {
                 {QUOTES[quoteIdx]}
               </p>
             </div>
+          </div>
+
+          {/* Hero figure */}
+          <div className="glass rounded-3xl overflow-hidden">
+            <img src={heroFig} alt="Severain AI neural network illustration" loading="lazy" width={1536} height={640}
+              className="w-full h-44 md:h-60 object-cover" />
+          </div>
+
+          {/* Figures / stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {STATS.map((s) => (
+              <div key={s.label} className="glass rounded-2xl p-4 text-center hover:scale-[1.03] transition">
+                <p className="text-2xl font-bold font-heading bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{s.value}</p>
+                <p className="text-[11px] text-muted-foreground mt-1">{s.label}</p>
+              </div>
+            ))}
           </div>
 
           {/* Features grid */}
@@ -292,7 +342,7 @@ export default function Auth() {
 
                 {mode === "signup" && (
                   <p className="text-xs text-muted-foreground mt-4 text-center">
-                    We'll send a 6-digit verification code to your email.
+                    We'll email you a confirmation link — click it (or enter the code if shown) to activate your account.
                   </p>
                 )}
 
@@ -314,10 +364,25 @@ export default function Auth() {
                 <div className="w-12 h-12 rounded-2xl gradient-primary glow-primary flex items-center justify-center mb-3">
                   <KeyRound className="w-6 h-6 text-primary-foreground" />
                 </div>
-                <h2 className="text-2xl font-bold font-heading mb-1">Verify your email</h2>
-                <p className="text-sm text-muted-foreground mb-5">
-                  We sent a 6-digit code to <strong className="text-foreground">{email}</strong>. Enter it below.
+                <h2 className="text-2xl font-bold font-heading mb-1">Check your email</h2>
+                <p className="text-sm text-muted-foreground mb-3">
+                  We sent a confirmation email to <strong className="text-foreground">{email}</strong>.
                 </p>
+
+                <div className="rounded-lg bg-secondary/60 p-3 mb-4 text-xs text-muted-foreground space-y-2">
+                  <p className="flex items-start gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
+                    <span><strong className="text-foreground">Click the confirmation link</strong> in the email — you'll be signed in automatically.</span>
+                  </p>
+                  <p className="flex items-start gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
+                    <span>If the email shows a <strong className="text-foreground">6-digit code</strong>, you can type it below instead.</span>
+                  </p>
+                  <p className="flex items-start gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
+                    <span>Can't find it? Check <strong className="text-foreground">Spam / Junk / Promotions</strong> — it can take 1–2 minutes to arrive.</span>
+                  </p>
+                </div>
 
                 {error && (
                   <div className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
@@ -336,13 +401,17 @@ export default function Auth() {
                   />
                   <button type="submit" disabled={loading || otp.length !== 6}
                     className="w-full py-3 rounded-lg gradient-primary text-primary-foreground font-semibold hover:opacity-90 transition disabled:opacity-50">
-                    {loading ? "Verifying..." : "Verify & Continue"}
+                    {loading ? "Verifying..." : "Verify code"}
                   </button>
                 </form>
 
-                <button onClick={resend} disabled={loading}
-                  className="w-full mt-3 text-xs text-muted-foreground hover:text-foreground">
-                  Didn't get it? Resend code
+                <button onClick={checkConfirmed} disabled={loading}
+                  className="w-full mt-3 py-2.5 rounded-lg glass-input hover:bg-secondary/60 transition text-sm font-medium">
+                  I clicked the link — continue
+                </button>
+                <button onClick={resend} disabled={loading || cooldown > 0}
+                  className="w-full mt-3 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50">
+                  {cooldown > 0 ? `Resend available in ${cooldown}s` : "Didn't get it? Resend email"}
                 </button>
               </>
             )}
