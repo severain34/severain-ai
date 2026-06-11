@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Shield, ArrowLeft, Save, Trash2, Bot, MessageSquare, Users, Sparkles,
   Megaphone, Cpu, KeyRound, Download, RotateCcw, Eye, EyeOff, Circle, Activity,
-  UserCog, RefreshCcw, Mail, Calendar,
+  UserCog, RefreshCcw, Mail, Calendar, HelpCircle, Send,
 } from "lucide-react";
 import { toast } from "sonner";
 
