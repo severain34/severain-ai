@@ -139,6 +139,60 @@ const Chat = () => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const avatarFileRef = useRef<HTMLInputElement>(null);
 
+  // Connected social/external accounts (per user, stored locally)
+  type Conn = { id: string; platform: string; handle: string; token: string };
+  const connKey = () => `severain_connections_${user?.id || user?.email || "guest"}`;
+  const [connections, setConnections] = useState<Conn[]>([]);
+  useEffect(() => {
+    try { setConnections(JSON.parse(localStorage.getItem(connKey()) || "[]")); } catch { setConnections([]); }
+  }, [user]);
+  const saveConnections = (next: Conn[]) => {
+    setConnections(next);
+    localStorage.setItem(connKey(), JSON.stringify(next));
+  };
+  const [newConn, setNewConn] = useState<Conn>({ id: "", platform: "instagram", handle: "", token: "" });
+
+  // Admin broadcast questions (admin asks → all users answer)
+  type AdminQ = { id: string; question: string; at: number };
+  const [adminQuestions, setAdminQuestions] = useState<AdminQ[]>(() => {
+    try { return JSON.parse(localStorage.getItem("severain_admin_questions") || "[]"); } catch { return []; }
+  });
+  const answerKey = () => `severain_admin_answers_${user?.id || user?.email || "guest"}`;
+  const [myAnswers, setMyAnswers] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem(`severain_admin_answers_guest`) || "{}"); } catch { return {}; }
+  });
+  useEffect(() => {
+    try { setMyAnswers(JSON.parse(localStorage.getItem(answerKey()) || "{}")); } catch { setMyAnswers({}); }
+  }, [user]);
+  useEffect(() => {
+    const i = setInterval(() => {
+      try { setAdminQuestions(JSON.parse(localStorage.getItem("severain_admin_questions") || "[]")); } catch {}
+    }, 5000);
+    return () => clearInterval(i);
+  }, []);
+  const [answerDrafts, setAnswerDrafts] = useState<Record<string, string>>({});
+  const submitAnswer = (qid: string) => {
+    const txt = (answerDrafts[qid] || "").trim();
+    if (!txt) return;
+    const next = { ...myAnswers, [qid]: txt };
+    setMyAnswers(next);
+    localStorage.setItem(answerKey(), JSON.stringify(next));
+    // Also push to global responses log for admin
+    try {
+      const all = JSON.parse(localStorage.getItem("severain_admin_responses") || "{}");
+      all[qid] = all[qid] || [];
+      all[qid].push({
+        userId: user?.id || user?.email || "guest",
+        email: user?.email || "guest",
+        answer: txt,
+        at: Date.now(),
+      });
+      localStorage.setItem("severain_admin_responses", JSON.stringify(all));
+    } catch {}
+    setAnswerDrafts((d) => ({ ...d, [qid]: "" }));
+    toast.success("Answer sent to admin");
+  };
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
