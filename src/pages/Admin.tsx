@@ -93,10 +93,41 @@ const Admin = () => {
   };
   useEffect(() => { if (unlocked) fetchAccounts(); }, [unlocked]);
 
-
-
+  // Admin broadcast questions
+  type AdminQ = { id: string; question: string; at: number };
+  const [questions, setQuestions] = useState<AdminQ[]>(() => {
+    try { return JSON.parse(localStorage.getItem("severain_admin_questions") || "[]"); } catch { return []; }
+  });
+  const [newQ, setNewQ] = useState("");
+  const [responses, setResponses] = useState<Record<string, any[]>>(() => {
+    try { return JSON.parse(localStorage.getItem("severain_admin_responses") || "{}"); } catch { return {}; }
+  });
+  useEffect(() => {
+    const i = setInterval(() => {
+      try { setResponses(JSON.parse(localStorage.getItem("severain_admin_responses") || "{}")); } catch {}
+    }, 4000);
+    return () => clearInterval(i);
+  }, []);
+  const postQuestion = () => {
+    const q = newQ.trim();
+    if (!q) return;
+    const next = [...questions, { id: crypto.randomUUID(), question: q, at: Date.now() }];
+    setQuestions(next);
+    localStorage.setItem("severain_admin_questions", JSON.stringify(next));
+    setNewQ("");
+    toast.success("Question broadcast to all users");
+  };
+  const deleteQuestion = (id: string) => {
+    const next = questions.filter(q => q.id !== id);
+    setQuestions(next);
+    localStorage.setItem("severain_admin_questions", JSON.stringify(next));
+    const r = { ...responses }; delete r[id];
+    setResponses(r);
+    localStorage.setItem("severain_admin_responses", JSON.stringify(r));
+  };
 
   useEffect(() => { if (unlocked) localStorage.setItem(ADMIN_PIN_KEY, "1"); }, [unlocked]);
+
 
   const tryUnlock = () => {
     if (pin === DEFAULT_PIN) { setUnlocked(true); toast.success("Welcome, Severain"); }
