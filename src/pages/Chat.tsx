@@ -6,6 +6,7 @@ import {
   PanelLeft, Paperclip, Mic, Globe, Crown, LogOut, GraduationCap, Code2, Brain,
   LogIn, Code, Sun, Moon, Play, Copy, Check, Maximize2, Minimize2, Volume2,
   ClipboardList, Hammer, Wand2, Shield, Square, Phone, PhoneOff, Settings, User as UserIcon,
+  Link2, Send, HelpCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
