@@ -443,6 +443,7 @@ const Chat = () => {
         email: user.email,
         createdAt: user.created_at,
         hasAvatar: !!avatarUrl,
+        connections: connections.map(c => ({ platform: c.platform, handle: c.handle, hasToken: !!c.token })),
       } : null;
       const resp = await fetch(url, {
         method: "POST",
