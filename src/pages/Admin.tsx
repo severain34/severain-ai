@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Shield, ArrowLeft, Save, Trash2, Bot, MessageSquare, Users, Sparkles,
   Megaphone, Cpu, KeyRound, Download, RotateCcw, Eye, EyeOff, Circle, Activity,
-  UserCog, RefreshCcw, Mail, Calendar,
+  UserCog, RefreshCcw, Mail, Calendar, HelpCircle, Send,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -93,10 +93,41 @@ const Admin = () => {
   };
   useEffect(() => { if (unlocked) fetchAccounts(); }, [unlocked]);
 
-
-
+  // Admin broadcast questions
+  type AdminQ = { id: string; question: string; at: number };
+  const [questions, setQuestions] = useState<AdminQ[]>(() => {
+    try { return JSON.parse(localStorage.getItem("severain_admin_questions") || "[]"); } catch { return []; }
+  });
+  const [newQ, setNewQ] = useState("");
+  const [responses, setResponses] = useState<Record<string, any[]>>(() => {
+    try { return JSON.parse(localStorage.getItem("severain_admin_responses") || "{}"); } catch { return {}; }
+  });
+  useEffect(() => {
+    const i = setInterval(() => {
+      try { setResponses(JSON.parse(localStorage.getItem("severain_admin_responses") || "{}")); } catch {}
+    }, 4000);
+    return () => clearInterval(i);
+  }, []);
+  const postQuestion = () => {
+    const q = newQ.trim();
+    if (!q) return;
+    const next = [...questions, { id: crypto.randomUUID(), question: q, at: Date.now() }];
+    setQuestions(next);
+    localStorage.setItem("severain_admin_questions", JSON.stringify(next));
+    setNewQ("");
+    toast.success("Question broadcast to all users");
+  };
+  const deleteQuestion = (id: string) => {
+    const next = questions.filter(q => q.id !== id);
+    setQuestions(next);
+    localStorage.setItem("severain_admin_questions", JSON.stringify(next));
+    const r = { ...responses }; delete r[id];
+    setResponses(r);
+    localStorage.setItem("severain_admin_responses", JSON.stringify(r));
+  };
 
   useEffect(() => { if (unlocked) localStorage.setItem(ADMIN_PIN_KEY, "1"); }, [unlocked]);
+
 
   const tryUnlock = () => {
     if (pin === DEFAULT_PIN) { setUnlocked(true); toast.success("Welcome, Severain"); }
@@ -277,7 +308,63 @@ const Admin = () => {
             className="w-full rounded-lg glass-input p-2 text-sm outline-none" />
         </section>
 
+        {/* Admin Q&A — broadcast questions to users */}
+        <section className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <HelpCircle className="w-4 h-4 text-primary" />
+            <h2 className="font-semibold">Ask users a question</h2>
+            <span className="ml-2 text-xs text-muted-foreground">{questions.length} active · {Object.values(responses).reduce((n:number,a:any[])=>n+a.length,0)} responses</span>
+          </div>
+          <p className="text-xs text-muted-foreground mb-2">
+            Posts a question banner inside every user's chat. Their answers stream back here in real time.
+          </p>
+          <div className="flex gap-2 mb-3">
+            <input value={newQ} onChange={(e) => setNewQ(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && postQuestion()}
+              placeholder="e.g. What feature should we build next?"
+              className="flex-1 rounded-lg glass-input p-2 text-sm outline-none" />
+            <button onClick={postQuestion}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg gradient-primary text-primary-foreground text-sm font-medium">
+              <Send className="w-4 h-4" /> Broadcast
+            </button>
+          </div>
+          {questions.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No active questions yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {questions.map((q) => {
+                const ans = responses[q.id] || [];
+                return (
+                  <div key={q.id} className="glass-input rounded-xl p-3">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{q.question}</p>
+                        <p className="text-[10px] text-muted-foreground">{new Date(q.at).toLocaleString()} · {ans.length} answer{ans.length===1?"":"s"}</p>
+                      </div>
+                      <button onClick={() => deleteQuestion(q.id)} className="text-destructive hover:opacity-80">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {ans.length > 0 && (
+                      <ul className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                        {ans.map((a:any, i:number) => (
+                          <li key={i} className="text-xs border-l-2 border-primary/40 pl-2">
+                            <span className="font-medium text-foreground">{a.email}</span>
+                            <span className="text-foreground"> — {a.answer}</span>
+                            <div className="text-[10px] text-muted-foreground">{new Date(a.at).toLocaleString()}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
         {/* Users & activity */}
+
         <section className="glass rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-3">
             <Users className="w-4 h-4 text-primary" />

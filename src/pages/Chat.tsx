@@ -6,6 +6,7 @@ import {
   PanelLeft, Paperclip, Mic, Globe, Crown, LogOut, GraduationCap, Code2, Brain,
   LogIn, Code, Sun, Moon, Play, Copy, Check, Maximize2, Minimize2, Volume2,
   ClipboardList, Hammer, Wand2, Shield, Square, Phone, PhoneOff, Settings, User as UserIcon,
+  Link2, Send, HelpCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -137,6 +138,60 @@ const Chat = () => {
   const [displayName, setDisplayName] = useState(() => localStorage.getItem("severain_display_name") || "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const avatarFileRef = useRef<HTMLInputElement>(null);
+
+  // Connected social/external accounts (per user, stored locally)
+  type Conn = { id: string; platform: string; handle: string; token: string };
+  const connKey = () => `severain_connections_${user?.id || user?.email || "guest"}`;
+  const [connections, setConnections] = useState<Conn[]>([]);
+  useEffect(() => {
+    try { setConnections(JSON.parse(localStorage.getItem(connKey()) || "[]")); } catch { setConnections([]); }
+  }, [user]);
+  const saveConnections = (next: Conn[]) => {
+    setConnections(next);
+    localStorage.setItem(connKey(), JSON.stringify(next));
+  };
+  const [newConn, setNewConn] = useState<Conn>({ id: "", platform: "instagram", handle: "", token: "" });
+
+  // Admin broadcast questions (admin asks → all users answer)
+  type AdminQ = { id: string; question: string; at: number };
+  const [adminQuestions, setAdminQuestions] = useState<AdminQ[]>(() => {
+    try { return JSON.parse(localStorage.getItem("severain_admin_questions") || "[]"); } catch { return []; }
+  });
+  const answerKey = () => `severain_admin_answers_${user?.id || user?.email || "guest"}`;
+  const [myAnswers, setMyAnswers] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem(`severain_admin_answers_guest`) || "{}"); } catch { return {}; }
+  });
+  useEffect(() => {
+    try { setMyAnswers(JSON.parse(localStorage.getItem(answerKey()) || "{}")); } catch { setMyAnswers({}); }
+  }, [user]);
+  useEffect(() => {
+    const i = setInterval(() => {
+      try { setAdminQuestions(JSON.parse(localStorage.getItem("severain_admin_questions") || "[]")); } catch {}
+    }, 5000);
+    return () => clearInterval(i);
+  }, []);
+  const [answerDrafts, setAnswerDrafts] = useState<Record<string, string>>({});
+  const submitAnswer = (qid: string) => {
+    const txt = (answerDrafts[qid] || "").trim();
+    if (!txt) return;
+    const next = { ...myAnswers, [qid]: txt };
+    setMyAnswers(next);
+    localStorage.setItem(answerKey(), JSON.stringify(next));
+    // Also push to global responses log for admin
+    try {
+      const all = JSON.parse(localStorage.getItem("severain_admin_responses") || "{}");
+      all[qid] = all[qid] || [];
+      all[qid].push({
+        userId: user?.id || user?.email || "guest",
+        email: user?.email || "guest",
+        answer: txt,
+        at: Date.now(),
+      });
+      localStorage.setItem("severain_admin_responses", JSON.stringify(all));
+    } catch {}
+    setAnswerDrafts((d) => ({ ...d, [qid]: "" }));
+    toast.success("Answer sent to admin");
+  };
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -388,6 +443,7 @@ const Chat = () => {
         email: user.email,
         createdAt: user.created_at,
         hasAvatar: !!avatarUrl,
+        connections: connections.map(c => ({ platform: c.platform, handle: c.handle, hasToken: !!c.token })),
       } : null;
       const resp = await fetch(url, {
         method: "POST",
@@ -692,6 +748,44 @@ const Chat = () => {
           </div>
         )}
 
+        {adminQuestions.length > 0 && (
+          <div className="border-b border-border bg-secondary/40 px-4 py-3 space-y-2 max-h-64 overflow-y-auto">
+            {adminQuestions.map((q) => {
+              const answered = !!myAnswers[q.id];
+              return (
+                <div key={q.id} className="max-w-3xl mx-auto glass rounded-xl p-3">
+                  <div className="flex items-start gap-2 mb-2">
+                    <HelpCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">Question from Severain (admin)</p>
+                      <p className="text-sm font-medium">{q.question}</p>
+                    </div>
+                  </div>
+                  {answered ? (
+                    <p className="text-xs text-emerald-400">✓ Your answer: {myAnswers[q.id]}</p>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        value={answerDrafts[q.id] || ""}
+                        onChange={(e) => setAnswerDrafts((d) => ({ ...d, [q.id]: e.target.value }))}
+                        onKeyDown={(e) => e.key === "Enter" && submitAnswer(q.id)}
+                        placeholder="Type your answer..."
+                        className="flex-1 px-3 py-1.5 rounded-lg glass-input text-sm outline-none"
+                      />
+                      <button onClick={() => submitAnswer(q.id)}
+                        className="px-3 py-1.5 rounded-lg gradient-primary text-primary-foreground text-sm flex items-center gap-1">
+                        <Send className="w-3.5 h-3.5" /> Send
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+
+
         <div ref={scrollRef} onScroll={onMessagesScroll} className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
             {messages.length === 0 && !streaming && (
@@ -862,7 +956,60 @@ const Chat = () => {
                   <p className="text-muted-foreground pt-1">Login PIN: <code className="text-foreground font-bold">severain2026</code></p>
                 </div>
               )}
+
+              {/* Connected accounts (AI can use them) */}
+              <div className="rounded-xl p-3 border border-border bg-secondary/30 space-y-2">
+                <div className="flex items-center gap-1.5 font-semibold text-sm">
+                  <Link2 className="w-4 h-4 text-primary" /> Connected accounts
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Add Instagram / X / Facebook / TikTok handles and access tokens.
+                  Severain AI will use them to draft posts, schedule images and act on your behalf.
+                  Tokens are stored only in your browser.
+                </p>
+                {connections.length > 0 && (
+                  <ul className="space-y-1">
+                    {connections.map((c) => (
+                      <li key={c.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg glass-input text-xs">
+                        <span className="font-medium capitalize">{c.platform}</span>
+                        <span className="text-muted-foreground">@{c.handle}</span>
+                        <span className="ml-auto text-[10px] text-emerald-400">{c.token ? "token saved" : "no token"}</span>
+                        <button onClick={() => saveConnections(connections.filter(x => x.id !== c.id))}
+                          className="text-destructive hover:opacity-80"><X className="w-3 h-3" /></button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="grid grid-cols-3 gap-1.5">
+                  <select value={newConn.platform} onChange={(e) => setNewConn({ ...newConn, platform: e.target.value })}
+                    className="rounded-lg glass-input px-2 py-1.5 text-xs outline-none">
+                    <option value="instagram">Instagram</option>
+                    <option value="x">X / Twitter</option>
+                    <option value="facebook">Facebook</option>
+                    <option value="tiktok">TikTok</option>
+                    <option value="linkedin">LinkedIn</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="gmail">Gmail</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <input value={newConn.handle} onChange={(e) => setNewConn({ ...newConn, handle: e.target.value })}
+                    placeholder="@handle" className="rounded-lg glass-input px-2 py-1.5 text-xs outline-none" />
+                  <input value={newConn.token} onChange={(e) => setNewConn({ ...newConn, token: e.target.value })}
+                    placeholder="access token" type="password" className="rounded-lg glass-input px-2 py-1.5 text-xs outline-none" />
+                </div>
+                <button onClick={() => {
+                    if (!newConn.handle.trim()) { toast.error("Add a handle"); return; }
+                    saveConnections([...connections, { ...newConn, id: crypto.randomUUID() }]);
+                    setNewConn({ id: "", platform: "instagram", handle: "", token: "" });
+                    toast.success("Account connected");
+                  }}
+                  className="w-full py-1.5 rounded-lg gradient-primary text-primary-foreground text-xs font-medium">
+                  + Connect account
+                </button>
+              </div>
+
               <div className="flex gap-2 pt-2">
+
                 <button
                   onClick={saveSettings}
                   className="flex-1 py-2 rounded-lg gradient-primary text-primary-foreground font-medium">Save</button>

@@ -51,8 +51,14 @@ Deno.serve(async (req) => {
 - Email: ${String(uc.email || "unknown").slice(0, 100)}
 - Member since: ${String(uc.createdAt || "unknown").slice(0, 40)}
 - Profile photo: ${uc.hasAvatar ? "uploaded" : "not uploaded yet"}
-Greet and address the user by name when natural. If asked what account data you can access, list exactly the items above and nothing more. Help them update their display name or profile photo via Account settings when asked.`
-      : "";
+Greet and address the user by name when natural. If asked what account data you can access, list exactly the items above and nothing more. Help them update their display name or profile photo via Account settings when asked.
+
+CONNECTED SOCIAL ACCOUNTS (the user pasted these in Account settings, so you may act on their behalf):
+${Array.isArray(uc.connections) && uc.connections.length
+  ? uc.connections.map((c: any) => `- ${String(c.platform).slice(0,20)}: @${String(c.handle).slice(0,60)} (${c.hasToken ? "token available" : "no token"})`).join("\n")
+  : "- (none connected yet)"}
+When the user asks you to post an image, write a caption, schedule content, or message someone on these platforms: (1) draft the post/message text immediately, (2) confirm which connected account to use, (3) tell them exactly what will be sent and ask for confirmation. Never reveal raw tokens. If no account is connected, instruct them to add one in Account settings → Connected accounts.`
+        : "";
     const system = [BASE, modePrompt, langPrompt, adminPrompt, userPrompt].filter(Boolean).join("\n\n");
 
     const finalMessages = [...messages];
