@@ -748,6 +748,44 @@ const Chat = () => {
           </div>
         )}
 
+        {adminQuestions.length > 0 && (
+          <div className="border-b border-border bg-secondary/40 px-4 py-3 space-y-2 max-h-64 overflow-y-auto">
+            {adminQuestions.map((q) => {
+              const answered = !!myAnswers[q.id];
+              return (
+                <div key={q.id} className="max-w-3xl mx-auto glass rounded-xl p-3">
+                  <div className="flex items-start gap-2 mb-2">
+                    <HelpCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">Question from Severain (admin)</p>
+                      <p className="text-sm font-medium">{q.question}</p>
+                    </div>
+                  </div>
+                  {answered ? (
+                    <p className="text-xs text-emerald-400">✓ Your answer: {myAnswers[q.id]}</p>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        value={answerDrafts[q.id] || ""}
+                        onChange={(e) => setAnswerDrafts((d) => ({ ...d, [q.id]: e.target.value }))}
+                        onKeyDown={(e) => e.key === "Enter" && submitAnswer(q.id)}
+                        placeholder="Type your answer..."
+                        className="flex-1 px-3 py-1.5 rounded-lg glass-input text-sm outline-none"
+                      />
+                      <button onClick={() => submitAnswer(q.id)}
+                        className="px-3 py-1.5 rounded-lg gradient-primary text-primary-foreground text-sm flex items-center gap-1">
+                        <Send className="w-3.5 h-3.5" /> Send
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+
+
         <div ref={scrollRef} onScroll={onMessagesScroll} className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
             {messages.length === 0 && !streaming && (
