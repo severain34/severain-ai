@@ -956,7 +956,60 @@ const Chat = () => {
                   <p className="text-muted-foreground pt-1">Login PIN: <code className="text-foreground font-bold">severain2026</code></p>
                 </div>
               )}
+
+              {/* Connected accounts (AI can use them) */}
+              <div className="rounded-xl p-3 border border-border bg-secondary/30 space-y-2">
+                <div className="flex items-center gap-1.5 font-semibold text-sm">
+                  <Link2 className="w-4 h-4 text-primary" /> Connected accounts
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Add Instagram / X / Facebook / TikTok handles and access tokens.
+                  Severain AI will use them to draft posts, schedule images and act on your behalf.
+                  Tokens are stored only in your browser.
+                </p>
+                {connections.length > 0 && (
+                  <ul className="space-y-1">
+                    {connections.map((c) => (
+                      <li key={c.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg glass-input text-xs">
+                        <span className="font-medium capitalize">{c.platform}</span>
+                        <span className="text-muted-foreground">@{c.handle}</span>
+                        <span className="ml-auto text-[10px] text-emerald-400">{c.token ? "token saved" : "no token"}</span>
+                        <button onClick={() => saveConnections(connections.filter(x => x.id !== c.id))}
+                          className="text-destructive hover:opacity-80"><X className="w-3 h-3" /></button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="grid grid-cols-3 gap-1.5">
+                  <select value={newConn.platform} onChange={(e) => setNewConn({ ...newConn, platform: e.target.value })}
+                    className="rounded-lg glass-input px-2 py-1.5 text-xs outline-none">
+                    <option value="instagram">Instagram</option>
+                    <option value="x">X / Twitter</option>
+                    <option value="facebook">Facebook</option>
+                    <option value="tiktok">TikTok</option>
+                    <option value="linkedin">LinkedIn</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="gmail">Gmail</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <input value={newConn.handle} onChange={(e) => setNewConn({ ...newConn, handle: e.target.value })}
+                    placeholder="@handle" className="rounded-lg glass-input px-2 py-1.5 text-xs outline-none" />
+                  <input value={newConn.token} onChange={(e) => setNewConn({ ...newConn, token: e.target.value })}
+                    placeholder="access token" type="password" className="rounded-lg glass-input px-2 py-1.5 text-xs outline-none" />
+                </div>
+                <button onClick={() => {
+                    if (!newConn.handle.trim()) { toast.error("Add a handle"); return; }
+                    saveConnections([...connections, { ...newConn, id: crypto.randomUUID() }]);
+                    setNewConn({ id: "", platform: "instagram", handle: "", token: "" });
+                    toast.success("Account connected");
+                  }}
+                  className="w-full py-1.5 rounded-lg gradient-primary text-primary-foreground text-xs font-medium">
+                  + Connect account
+                </button>
+              </div>
+
               <div className="flex gap-2 pt-2">
+
                 <button
                   onClick={saveSettings}
                   className="flex-1 py-2 rounded-lg gradient-primary text-primary-foreground font-medium">Save</button>
