@@ -324,11 +324,60 @@ const Chat = () => {
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
+    e.target.value = "";
     if (!f) return;
-    if (f.size > 1_000_000) return toast.error("Max 1MB file");
-    const content = await f.text();
-    setAttachment({ name: f.name, content });
+    if (f.size > 4_000_000) return toast.error("Max 4MB file");
+    const isBinary = /^(image|audio|video)\//.test(f.type);
+    if (isBinary) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const b64 = (reader.result as string) || "";
+        setAttachment({ name: f.name, content: `[binary ${f.type}] data URL length ${b64.length}. Preview: ${b64.slice(0, 200)}...` });
+      };
+      reader.readAsDataURL(f);
+    } else {
+      const content = await f.text();
+      setAttachment({ name: f.name, content });
+    }
     toast.success(`Attached ${f.name}`);
+    setPlusOpen(false);
+  };
+
+  // Record a short voice clip using MediaRecorder, then attach it
+  const toggleRecordClip = async () => {
+    if (recording) { mediaRecRef.current?.stop(); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      mr.ondataavailable = (ev) => ev.data.size && chunks.push(ev.data);
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setRecording(false);
+        const blob = new Blob(chunks, { type: mr.mimeType || "audio/webm" });
+        if (blob.size > 4_000_000) return toast.error("Clip too large (max 4MB)");
+        const reader = new FileReader();
+        reader.onload = () => {
+          const b64 = (reader.result as string) || "";
+          const name = `voice-clip-${new Date().toISOString().slice(11,19)}.webm`;
+          setAttachment({ name, content: `[voice clip ${blob.type}, ${Math.round(blob.size/1024)}KB] data URL preview: ${b64.slice(0, 120)}...` });
+          toast.success("Voice clip attached");
+        };
+        reader.readAsDataURL(blob);
+      };
+      mediaRecRef.current = mr;
+      mr.start();
+      setRecording(true);
+      toast.message("Recording... tap mic again to stop");
+    } catch {
+      toast.error("Microphone permission denied");
+    }
+  };
+
+  const insertPrefix = (text: string) => {
+    setInput((p) => (p ? `${text} ${p}` : text));
+    setPlusOpen(false);
+    setTimeout(() => inputRef.current?.focus(), 30);
   };
 
   const toggleVoice = () => {
