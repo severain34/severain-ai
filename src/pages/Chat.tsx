@@ -898,15 +898,60 @@ const Chat = () => {
             )}
             <div className="relative flex items-end gap-2 glass rounded-2xl p-2 focus-within:ring-2 focus-within:ring-primary/40">
               <input ref={fileRef} type="file" hidden onChange={onFile}
-                accept=".txt,.md,.json,.csv,.js,.ts,.tsx,.jsx,.py,.html,.css,.xml,.yaml,.yml" />
-              <button onClick={() => fileRef.current?.click()} title="Attach file"
-                className="w-9 h-9 rounded-lg hover:bg-secondary flex items-center justify-center text-muted-foreground">
-                <Paperclip className="w-4 h-4" />
-              </button>
+                accept=".txt,.md,.json,.csv,.js,.ts,.tsx,.jsx,.py,.html,.css,.xml,.yaml,.yml,.pdf" />
+              <input ref={imageRef} type="file" hidden accept="image/*" onChange={onFile} />
+              <input ref={cameraRef} type="file" hidden accept="image/*" capture="environment" onChange={onFile} />
+              <input ref={audioRef} type="file" hidden accept="audio/*" onChange={onFile} />
+
+              {/* Plus menu */}
+              <div className="relative">
+                <button onClick={() => setPlusOpen((v) => !v)} title="Add"
+                  className="w-9 h-9 rounded-lg hover:bg-secondary flex items-center justify-center text-muted-foreground">
+                  <Plus className={`w-5 h-5 transition-transform ${plusOpen ? "rotate-45" : ""}`} />
+                </button>
+                {plusOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setPlusOpen(false)} />
+                    <div className="absolute bottom-12 left-0 z-40 w-64 glass rounded-2xl p-2 shadow-2xl border border-border">
+                      {[
+                        { icon: Paperclip, label: "Attach file", onClick: () => { fileRef.current?.click(); } },
+                        { icon: ImageIcon, label: "Upload photo", onClick: () => { imageRef.current?.click(); } },
+                        { icon: Camera, label: "Take photo (camera)", onClick: () => { cameraRef.current?.click(); } },
+                        { icon: Wand2, label: "Create image", onClick: () => insertPrefix("Generate a highly detailed image of:") },
+                        { icon: Film, label: "Create video", onClick: () => insertPrefix("Create a short cinematic video about:") },
+                        { icon: Music, label: "Upload audio", onClick: () => { audioRef.current?.click(); } },
+                        { icon: Mic, label: recording ? "Stop recording" : "Record voice clip", onClick: () => { toggleRecordClip(); setPlusOpen(false); } },
+                        { icon: Globe, label: "Search the web", onClick: () => insertPrefix("Search the web and cite sources for:") },
+                        { icon: Languages, label: "Translate", onClick: () => insertPrefix(`Translate to ${lang}:`) },
+                        { icon: Code2, label: "Write code", onClick: () => insertPrefix("Write complete, runnable code for:") },
+                        { icon: ClipboardList, label: "Plan a project", onClick: () => { quickAction("plan"); setPlusOpen(false); } },
+                        { icon: Hammer, label: "Build an app", onClick: () => { quickAction("build"); setPlusOpen(false); } },
+                        { icon: Lightbulb, label: "Prompt ideas", onClick: () => { quickAction("prompt"); setPlusOpen(false); } },
+                        { icon: BookOpen, label: "Summarize", onClick: () => insertPrefix("Summarize in clear bullet points:") },
+                        { icon: Calculator, label: "Solve math", onClick: () => insertPrefix("Solve step by step:") },
+                        { icon: Mail, label: "Draft email", onClick: () => insertPrefix("Draft a professional email about:") },
+                        { icon: ScrollText, label: "Write essay", onClick: () => insertPrefix("Write a long, well-structured essay on:") },
+                        { icon: Palette, label: "Design a logo", onClick: () => insertPrefix("Design a modern logo concept for:") },
+                        { icon: Zap, label: "Explain simply", onClick: () => insertPrefix("Explain like I'm 5:") },
+                      ].map((it) => (
+                        <button key={it.label} onClick={it.onClick}
+                          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-secondary text-sm text-left">
+                          <it.icon className="w-4 h-4 text-primary shrink-0" />
+                          <span className="truncate">{it.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
               <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                 placeholder={tr(lang, "message")} rows={1} disabled={streaming}
                 className="flex-1 bg-transparent outline-none resize-none px-2 py-2 max-h-40" />
+              {recording && (
+                <span className="text-xs text-destructive font-semibold animate-pulse mr-1">● REC</span>
+              )}
               {streaming ? (
                 <button onClick={stopStreaming} title="Stop generating"
                   className="w-10 h-10 rounded-xl bg-destructive flex items-center justify-center hover:opacity-90">
