@@ -197,6 +197,12 @@ const Chat = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const imageRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const audioRef = useRef<HTMLInputElement>(null);
+  const [plusOpen, setPlusOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const mediaRecRef = useRef<MediaRecorder | null>(null);
   const callModeRef = useRef(false);
   useEffect(() => { callModeRef.current = callMode; }, [callMode]);
   const recogRef = useRef<any>(null);
