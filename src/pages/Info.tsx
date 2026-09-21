@@ -9,7 +9,7 @@ const CONTENT: Record<string, { title: string; body: JSX.Element }> = {
         <p>Severain AI is your all-in-one assistant — built by Senganeza Severain.</p>
         <ul className="list-disc pl-6 space-y-1 mt-3">
           <li>Smart chat with Plan / Build / Prompt modes</li>
-          <li>Image creation and vision understanding</li>
+          <li>Photo uploads and vision understanding</li>
           <li>File analysis (code, JSON, CSV, docs)</li>
           <li>Voice read-aloud and 10+ languages</li>
           <li>Open editor link to launch VS Code directly</li>
@@ -25,16 +25,12 @@ const CONTENT: Record<string, { title: string; body: JSX.Element }> = {
         <p>Free forever for basic use. Upgrade for more power:</p>
         <ul className="list-disc pl-6 space-y-1 mt-3">
           <li><strong>Free</strong> — Standard model, limited daily messages.</li>
-          <li><strong>Plus — 5,000 RWF / month</strong> — Smarter models, unlimited messages, image creation.</li>
+          <li><strong>Plus — 5,000 RWF / month</strong> — Smarter models, unlimited messages and larger uploads.</li>
           <li><strong>Pro — 45,000 RWF / year</strong> — Everything in Plus + highest priority and largest uploads.</li>
         </ul>
         <p className="mt-3">Pay via MTN MoMo / Airtel: <strong>0792 315 839</strong>.</p>
       </>
     ),
-  },
-  "image-generation": {
-    title: "Image generation",
-    body: <p>Generate stunning images directly from chat. Just describe what you want and Severain AI will create it. Click the <strong>Create image</strong> button at the top of the chat to start.</p>,
   },
   "prompt-library": {
     title: "Prompt library",

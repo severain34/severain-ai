@@ -85,11 +85,16 @@ export default function Auth() {
     setError(""); setLoading(true);
     try {
       if (mode === "signup") {
+        const normalizedEmail = email.trim().toLowerCase();
         const { data, error } = await supabase.auth.signUp({
-          email, password,
+          email: normalizedEmail, password,
           options: { emailRedirectTo: `${window.location.origin}/`, data: { full_name: name } },
         });
         if (error) throw error;
+        if (data.user && data.user.identities?.length === 0) {
+          throw new Error("An account already exists for this email. Please log in or reset your password.");
+        }
+        setEmail(normalizedEmail);
         if (data.session) {
           localStorage.removeItem("severain_guest");
           toast.success("Account created — welcome to Severain AI!");
@@ -111,7 +116,7 @@ export default function Auth() {
     e.preventDefault();
     setError(""); setLoading(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({ email, token: otp, type: "email" });
+      const { error } = await supabase.auth.verifyOtp({ email, token: otp, type: "signup" });
       if (error) throw error;
       toast.success("Email verified!");
       navigate("/");
@@ -360,7 +365,7 @@ export default function Auth() {
 
                 {mode === "signup" && (
                   <p className="text-xs text-muted-foreground mt-4 text-center">
-                    We'll email you a confirmation link — click it (or enter the code if shown) to activate your account.
+                    We'll email you a verification message. Check Spam or Junk if it does not appear within a few minutes.
                   </p>
                 )}
 
@@ -384,17 +389,17 @@ export default function Auth() {
                 </div>
                 <h2 className="text-2xl font-bold font-heading mb-1">Check your email</h2>
                 <p className="text-sm text-muted-foreground mb-3">
-                  We sent a confirmation email to <strong className="text-foreground">{email}</strong>.
+                   We sent a verification email to <strong className="text-foreground">{email}</strong>.
                 </p>
 
                 <div className="rounded-lg bg-secondary/60 p-3 mb-4 text-xs text-muted-foreground space-y-2">
                   <p className="flex items-start gap-1.5">
                     <Check className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
-                    <span><strong className="text-foreground">Click the confirmation link</strong> in the email — you'll be signed in automatically.</span>
+                     <span>Enter the <strong className="text-foreground">6-digit verification code</strong> shown in the email.</span>
                   </p>
                   <p className="flex items-start gap-1.5">
                     <Check className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
-                    <span>If the email shows a <strong className="text-foreground">6-digit code</strong>, you can type it below instead.</span>
+                     <span>If your email contains a confirmation button instead, click it to verify your account.</span>
                   </p>
                   <p className="flex items-start gap-1.5">
                     <AlertCircle className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
@@ -470,7 +475,6 @@ export default function Auth() {
             <ul className="space-y-2 text-muted-foreground">
               <li><a href="/info/features" className="hover:text-foreground">Features</a></li>
               <li><a href="/info/pricing" className="hover:text-foreground">Pricing</a></li>
-              <li><a href="/info/image-generation" className="hover:text-foreground">Image generation</a></li>
               <li><a href="/info/prompt-library" className="hover:text-foreground">Prompt library</a></li>
               <li><a href="/info/editor" className="hover:text-foreground">VS Code editor</a></li>
               <li><a href="/info/changelog" className="hover:text-foreground">Changelog</a></li>
