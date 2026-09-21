@@ -769,15 +769,6 @@ const Chat = () => {
               <span>Prompt helper</span>
             </button>
 
-            <button
-              onClick={() => { setInput("Generate a high-quality image of: "); setTimeout(() => inputRef.current?.focus(), 30); }}
-              title="Create an image"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass-input text-sm hover:bg-secondary"
-            >
-              <Sparkles className="w-4 h-4 text-emerald-400" />
-              <span>Create image</span>
-            </button>
-
             <div className="relative">
               <Globe className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               <select value={lang} onChange={(e) => setLang(e.target.value)}
@@ -917,7 +908,6 @@ const Chat = () => {
                         { icon: Paperclip, label: "Attach file", onClick: () => { fileRef.current?.click(); } },
                         { icon: ImageIcon, label: "Upload photo", onClick: () => { imageRef.current?.click(); } },
                         { icon: Camera, label: "Take photo (camera)", onClick: () => { cameraRef.current?.click(); } },
-                        { icon: Wand2, label: "Create image", onClick: () => insertPrefix("Generate a highly detailed image of:") },
                         { icon: Film, label: "Create video", onClick: () => insertPrefix("Create a short cinematic video about:") },
                         { icon: Music, label: "Upload audio", onClick: () => { audioRef.current?.click(); } },
                         { icon: Mic, label: recording ? "Stop recording" : "Record voice clip", onClick: () => { toggleRecordClip(); setPlusOpen(false); } },
@@ -1135,7 +1125,7 @@ const Chat = () => {
               </h2>
               <button onClick={() => setShowUpgrade(false)}><X className="w-5 h-5" /></button>
             </div>
-            <p className="text-sm text-muted-foreground mb-5">Get more access to Severain AI's smartest models, image generation and more.</p>
+            <p className="text-sm text-muted-foreground mb-5">Get more access to Severain AI's smartest models, larger uploads and more.</p>
             <div className="grid md:grid-cols-3 gap-3">
               {[
                 { name: "Free", price: "0 RWF", tag: "Current plan", features: ["Standard model", "Limited daily messages", "Basic file analysis", "Standard speed"], cta: "Your plan", disabled: true },
